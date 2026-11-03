@@ -12,6 +12,16 @@ DATA=/var/lib/hush-autoreply
 SRC=/opt/hush-src
 
 [ "$(id -u)" = 0 ] || { echo "Запусти от root"; exit 1; }
+
+echo "==> Проверка портов 80/443 (VPN и другие службы не трогаем)"
+BUSY=$(ss -Htlpn '( sport = :80 or sport = :443 )' 2>/dev/null | grep -v '"nginx"' || true)
+if [ -n "$BUSY" ]; then
+  echo "!! Порт 80 или 443 уже занят другой программой (возможно, VPN):"
+  echo "$BUSY"
+  echo "!! Ничего не изменено. Пришли этот вывод, подберём другой вариант."
+  exit 1
+fi
+HAD_NGINX=0; command -v nginx >/dev/null 2>&1 && HAD_NGINX=1
 echo "==> Пакеты"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
@@ -83,7 +93,7 @@ server {
 NGINX
 fi
 ln -sf /etc/nginx/sites-available/hush-autoreply /etc/nginx/sites-enabled/hush-autoreply
-rm -f /etc/nginx/sites-enabled/default
+[ $HAD_NGINX = 0 ] && rm -f /etc/nginx/sites-enabled/default
 nginx -t -q && systemctl reload nginx
 
 if ufw status 2>/dev/null | grep -q "Status: active"; then
