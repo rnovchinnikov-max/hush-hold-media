@@ -1,0 +1,6 @@
+<div class="tbl"><table><tr><th>Время</th><th>Что</th><th>Статус</th><th>Кто</th><th>Текст / детали</th></tr>
+{% for e in events %}<tr><td class="mute">{{ e.at|t }}</td><td>{{ e.kind }}</td>
+<td><span class="pill {% if e.status in ('ok','matched') %}ok{% elif e.status in ('error','exception','bad_signature') %}err{% elif e.status in ('dry_run','not_following','rate_limited','paused') %}warn{% endif %}">{{ e.status }}</span></td>
+<td>{% if e.username %}@{{ e.username }}{% else %}<span class="mute">{{ e.user_id[:12] }}</span>{% endif %}</td>
+<td class="small">{{ e.text }}{% if e.detail %}<div class="mute">{{ e.detail[:220] }}</div>{% endif %}</td></tr>
+{% else %}<tr><td colspan="5" class="mute">Пока пусто.</td></tr>{% endfor %}</table></div>

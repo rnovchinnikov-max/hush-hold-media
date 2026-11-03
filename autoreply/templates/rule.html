@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block body %}
+<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>{{ 'Правило: ' ~ rule.name if rule_id else 'Новое правило' }}</h2>
+<label class="check"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> Включено</label>
+<label>Название (для себя)</label><input type="text" name="name" value="{{ rule.name }}">
+<label>Ключевые слова (через запятую, регистр не важен)</label><input type="text" name="keywords" value="{{ rule.keywords }}" placeholder="sleep, guide">
+<label>Как искать</label><select name="match_mode"><option value="word" {% if rule.match_mode=='word' %}selected{% endif %}>отдельным словом («sleep», но не «sleepy»)</option><option value="contains" {% if rule.match_mode=='contains' %}selected{% endif %}>где угодно в тексте</option></select>
+<label>Публичные ответы под комментарием (по одному в строке, берётся случайный; пусто = не отвечать публично)</label><textarea name="public_replies">{{ rule.public_replies }}</textarea>
+<label class="check"><input type="checkbox" name="require_follow" {% if rule.require_follow %}checked{% endif %}> Выдавать награду только подписчикам (сначала сообщение с кнопкой, потом проверка подписки)</label>
+<label>Первое сообщение в директ</label><textarea name="dm_text">{{ rule.dm_text }}</textarea>
+<label>Текст кнопки (до 20 символов)</label><input type="text" name="button_title" value="{{ rule.button_title }}" maxlength="20">
+<label>Награда: промокод / ссылка</label><textarea name="reward_text">{{ rule.reward_text }}</textarea>
+<label>Если не подписан</label><textarea name="not_following_text">{{ rule.not_following_text }}</textarea>
+<label>Кнопка повторной проверки (до 20 символов)</label><input type="text" name="recheck_title" value="{{ rule.recheck_title }}" maxlength="20">
+<label>Только для постов (ID через запятую; пусто = все посты и рилсы)</label><input type="text" name="media_ids" id="media_ids" value="{{ rule.media_ids }}">
+{% if media %}<p class="small mute">Нажми на пост, чтобы добавить/убрать его:</p><div class="media">
+{% for m in media %}<label><img src="{{ m.thumbnail_url or m.media_url }}" alt="" loading="lazy" onclick="tog('{{ m.id }}')" style="cursor:pointer"><span>{{ (m.caption or '')[:40] }}</span></label>{% endfor %}</div>{% endif %}
+<p class="row"><button>Сохранить</button>{% if rule_id %}<button class="danger" name="delete" value="1" onclick="return confirm('Удалить правило?')">Удалить</button>{% endif %}</p>
+</form>
+<script>function tog(id){const f=document.getElementById('media_ids');let a=f.value.split(',').map(s=>s.trim()).filter(Boolean);a=a.includes(id)?a.filter(x=>x!==id):a.concat(id);f.value=a.join(', ')}</script>
+{% endblock %}

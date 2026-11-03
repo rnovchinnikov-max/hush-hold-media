@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}{{ brand }}{% endblock %}{% block body %}
+<div class="card">
+{% if page=='home' %}<h1>🌙 {{ brand }}</h1><p>Gentle sleep tips for babies 0–3, from a mom of two. Find us on Instagram: <a href="https://instagram.com/hush_hold">@hush_hold</a>.</p>
+<p class="small"><a href="/privacy">Privacy policy</a> · <a href="/data-deletion">Data deletion</a></p>
+{% elif page=='privacy' %}<h1>Privacy Policy</h1><p class="mute">Last updated: November 2026</p>
+<p>This service is run by {{ brand }} (Instagram <a href="https://instagram.com/hush_hold">@hush_hold</a>). It answers comments and direct messages sent to our own Instagram account.</p>
+<h3>What we receive</h3><p>When you comment on our posts or message us on Instagram, Instagram sends us your public username, an Instagram-scoped user ID, the text of your comment or message, and whether you follow our account.</p>
+<h3>How we use it</h3><p>Only to reply to you: to answer your comment and send you the information or discount code you asked for. We do not sell, share or use this data for advertising.</p>
+<h3>Storage</h3><p>Logs of replies are stored on our server in the EU and deleted automatically after 180 days.</p>
+<h3>Your rights</h3><p>You can ask us to delete your data at any time, see <a href="/data-deletion">Data deletion</a>.</p>
+{% if contact %}<p>Contact: <a href="mailto:{{ contact }}">{{ contact }}</a></p>{% endif %}
+{% else %}<h1>Data deletion</h1><p>To delete any data we hold about you, send a direct message to <a href="https://instagram.com/hush_hold">@hush_hold</a> with the word <b>DELETE</b>{% if contact %} or email <a href="mailto:{{ contact }}">{{ contact }}</a>{% endif %}. We remove all records linked to your Instagram account within 30 days and confirm by message.</p>
+<p>You can also remove our app's access in Instagram: Settings → Website permissions / Apps and websites.</p>{% endif %}
+</div>{% endblock %}

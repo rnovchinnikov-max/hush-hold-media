@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block body %}
+<div class="card"><h2>Аккаунт</h2>
+{% if account %}<div class="row">{% if account.profile_picture_url %}<img src="{{ account.profile_picture_url }}" width="44" height="44" style="border-radius:50%">{% endif %}
+<div><b>@{{ account.username }}</b> <span class="mute">· {{ account.followers_count or '' }} подписчиков · id {{ account.user_id }}</span><br>
+<span class="small mute">Последний вебхук: {{ last_webhook|t if last_webhook else 'ещё не было' }} · токен обновлён: {{ token_refreshed|t if token_refreshed else '—' }}{% if token_days_left is not none %} · осталось {{ token_days_left }} дн.{% endif %} (продлевается сам раз в 7 дней)</span></div></div>
+{% elif account_err %}<p class="err">Токен не работает: {{ account_err }}</p>{% else %}<p class="warn">Токен ещё не задан. Вставь его ниже.</p>{% endif %}
+<details {% if not account %}open{% endif %}><summary class="small">Токен и вебхуки</summary>
+<form method="post" action="{{ url_for('save_token') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>Новый токен Instagram (из кабинета Meta, «Generate token»)</label><input type="password" name="token" autocomplete="off">
+<p class="row"><button name="action" value="save">Сохранить токен</button><button class="ghost" name="action" value="refresh">Продлить сейчас</button><button class="ghost" name="action" value="subscribe">Подписать аккаунт на вебхуки</button></p></form></details>
+</div>
+
+<div class="card"><h2>За сутки</h2><div class="grid">
+<div class="stat"><span class="mute">Комментарии с ключом</span><b>{{ today.get('comment:matched',0) }}</b></div>
+<div class="stat"><span class="mute">Ответы под комментом</span><b>{{ today.get('public_reply:ok',0) }}</b></div>
+<div class="stat"><span class="mute">Директ отправлен</span><b>{{ today.get('dm:ok',0) }}</b></div>
+<div class="stat"><span class="mute">Промокод выдан</span><b>{{ today.get('reward:ok',0) }}</b></div>
+<div class="stat"><span class="mute">Не подписаны</span><b>{{ today.get('reward:not_following',0) }}</b></div>
+<div class="stat"><span class="mute">Ошибки</span><b class="{{ 'err' if (today.get('dm:error',0)+today.get('public_reply:error',0)+today.get('reward:error',0)) else '' }}">{{ today.get('dm:error',0)+today.get('public_reply:error',0)+today.get('reward:error',0) }}</b></div>
+</div><p class="small mute">За 7 дней: {{ week.get('comment:matched',0) }} комментариев с ключом, {{ week.get('dm:ok',0) }} сообщений в директ, {{ week.get('reward:ok',0) }} промокодов.</p></div>
+
+<div class="card"><h2>Правила</h2><div class="tbl"><table><tr><th>Вкл</th><th>Название</th><th>Ключевые слова</th><th>Только подписчикам</th><th>Посты</th><th></th></tr>
+{% for r in rules %}<tr><td>{{ '✅' if r.enabled else '⏸' }}</td><td>{{ r.name }}</td><td><code>{{ r.keywords }}</code></td><td>{{ 'да' if r.require_follow else 'нет' }}</td><td>{{ 'выбранные' if r.media_ids else 'все' }}</td><td><a href="{{ url_for('rule_edit', rule_id=r.id) }}">изменить</a></td></tr>{% endfor %}
+</table></div><p><a class="btn" href="{{ url_for('rule_edit') }}">+ Новое правило</a></p></div>
+
+<div class="card"><h2>Режим работы</h2>
+<form method="post" action="{{ url_for('save_settings') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label class="check"><input type="checkbox" name="paused" {% if s.paused %}checked{% endif %}> Пауза (ничего не отвечать)</label>
+<label class="check"><input type="checkbox" name="test_mode" {% if s.test_mode %}checked{% endif %}> Тестовый режим: только записывать в журнал, ничего не отправлять</label>
+<label>Отвечать только этим аккаунтам (для теста, через запятую; пусто = всем)</label><input type="text" name="test_usernames" value="{{ s.test_usernames }}" placeholder="my_test_account">
+<label>Максимум публичных ответов в час</label><input type="number" name="replies_per_hour" value="{{ s.replies_per_hour }}" style="max-width:140px">
+<p><button>Сохранить</button></p></form>
+<form method="post" action="{{ url_for('test_dm') }}" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="text" name="text" value="SLEEP please!" style="max-width:260px"><button class="ghost">Симулировать комментарий</button></form></div>
+
+<div class="card"><h2>Последние события</h2>{% include "events.html" %}<p><a href="{{ url_for('log_page') }}">Весь журнал →</a></p></div>
+{% endblock %}

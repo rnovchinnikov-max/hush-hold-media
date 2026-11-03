@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block body %}
+<div class="card"><h2>Журнал</h2>
+<form class="row" method="get"><select name="kind" style="max-width:220px">
+{% for k in ['', 'comment','public_reply','dm','message','reward','follow_check','token','webhook','error'] %}<option value="{{k}}" {% if k==kind %}selected{% endif %}>{{ k or 'все' }}</option>{% endfor %}
+</select><button class="ghost">Показать</button></form><br>
+{% include "events.html" %}</div>
+{% endblock %}
