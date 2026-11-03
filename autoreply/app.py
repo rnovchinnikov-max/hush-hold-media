@@ -204,11 +204,10 @@ def save_token():
             tok = request.form.get("token", "").strip()
             if not tok:
                 raise core.ApiError("пустой токен")
-            core.kv_set("token", tok)
-            core.kv_set("token_refreshed_at", time.time())
+            note = core.set_new_token(tok)
             acc = core.me(force=True)
             core.subscribe_webhooks()
-            flash(f"Токен сохранён, аккаунт @{acc.get('username')}, вебхуки подписаны.")
+            flash(f"Токен сохранён ({note}), аккаунт @{acc.get('username')}, вебхуки подписаны.")
         elif action == "refresh":
             core.refresh_token()
             flash("Токен продлён на 60 дней.")

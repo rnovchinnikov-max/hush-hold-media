@@ -271,6 +271,27 @@ def refresh_token():
     return data
 
 
+def set_new_token(tok):
+    """Store a pasted token. A short-lived one (1 hour, e.g. from an OAuth redirect) is exchanged
+    for a long-lived 60-day token; a token from the dashboard "Generate token" is already long-lived."""
+    tok = tok.strip()
+    note = "долгий токен (60 дней)"
+    secret = CFG.get("IG_APP_SECRET")
+    expires_in = 60 * 86400
+    if secret:
+        r = requests.get("https://graph.instagram.com/access_token",
+                         params={"grant_type": "ig_exchange_token", "client_secret": secret,
+                                 "access_token": tok}, timeout=30)
+        data = r.json()
+        if "access_token" in data:
+            tok, expires_in = data["access_token"], int(data.get("expires_in", expires_in))
+            note = "короткий токен обменян на долгий (60 дней)"
+    kv_set("token", tok)
+    kv_set("token_refreshed_at", time.time())
+    kv_set("token_expires_at", time.time() + expires_in)
+    return note
+
+
 def reply_comment(comment_id, text):
     return api("POST", f"{comment_id}/replies", {"message": text})
 

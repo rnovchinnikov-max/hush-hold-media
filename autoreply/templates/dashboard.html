@@ -4,6 +4,7 @@
 <div><b>@{{ account.username }}</b> <span class="mute">· {{ account.followers_count or '' }} подписчиков · id {{ account.user_id }}</span><br>
 <span class="small mute">Последний вебхук: {{ last_webhook|t if last_webhook else 'ещё не было' }} · токен обновлён: {{ token_refreshed|t if token_refreshed else '—' }}{% if token_days_left is not none %} · осталось {{ token_days_left }} дн.{% endif %} (продлевается сам раз в 7 дней)</span></div></div>
 {% elif account_err %}<p class="err">Токен не работает: {{ account_err }}</p>{% else %}<p class="warn">Токен ещё не задан. Вставь его ниже.</p>{% endif %}
+{% if token_days_left is not none and token_days_left < 14 %}<p class="err">⚠️ Токен истекает через {{ token_days_left }} дн., а автопродление не сработало. Нажми «Продлить сейчас» или вставь новый токен.</p>{% endif %}
 <details {% if not account %}open{% endif %}><summary class="small">Токен и вебхуки</summary>
 <form method="post" action="{{ url_for('save_token') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
 <label>Новый токен Instagram (из кабинета Meta, «Generate token»)</label><input type="password" name="token" autocomplete="off">
