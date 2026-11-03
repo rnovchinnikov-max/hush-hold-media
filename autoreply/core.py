@@ -447,6 +447,14 @@ def deliver_reward(rule, igsid, username, source):
         except Exception as e:
             add_event("follow_check", "error", detail=e, **ev)
             following = True  # do not punish the person for an API hiccup
+    if following:
+        con = db()
+        recent = con.execute("select 1 from events where kind='reward' and status='ok' and user_id=? and rule_id=?"
+                             " and at>=?", (igsid, rule["id"], time.time() - 600)).fetchone()
+        con.close()
+        if recent:  # double tap on the button: one code is enough
+            add_event("reward", "duplicate_tap", detail=source, **ev)
+            return
     try:
         if following:
             send_dm({"id": igsid}, {"text": rule["reward_text"]})
