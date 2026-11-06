@@ -1,6 +1,9 @@
 """Hush&hold auto-replies: storage, Instagram API client and comment/DM logic.
 
-Works with "Instagram API with Instagram Login" (graph.instagram.com).
+Two connection modes:
+- "facebook": Instagram API with Unified Login (graph.facebook.com, never-expiring system user
+  token from the Facebook Login for Business dialog). The only option for apps created after ~Oct 2026.
+- "instagram": Instagram API with Instagram Login (graph.instagram.com, 60-day token).
 Flow per rule: comment with keyword -> public reply under the comment ->
 private reply in DM. If the rule requires a follow, the DM carries a button;
 when the person taps it we check is_user_follow_business and send the reward
@@ -46,7 +49,9 @@ def load_env(path=os.path.join(HERE, "config.env")):
 
 
 CFG = load_env()
-GRAPH = "https://graph.instagram.com/" + CFG.get("GRAPH_VERSION", "v23.0")
+IG_GRAPH = "https://graph.instagram.com/" + CFG.get("GRAPH_VERSION", "v23.0")
+FB_VERSION = CFG.get("FB_GRAPH_VERSION", "v25.0")
+FB_GRAPH = "https://graph.facebook.com/" + FB_VERSION
 DB_PATH = CFG.get("DB_PATH") or os.path.join(HERE, "data.db")
 
 
@@ -232,10 +237,25 @@ def token():
     return kv_get("token", "")
 
 
-def api(method, path, params=None, body=None):
+def mode():
+    return kv_get("api_mode", "instagram")
+
+
+def meta(k):
+    """Meta app settings: saved in the panel (kv) or in config.env (META_APP_ID, META_APP_SECRET, META_CONFIG_ID)."""
+    return kv_get("meta_" + k) or CFG.get("META_" + k.upper(), "")
+
+
+def acct():
+    """Path segment for the own account: 'me' with Instagram Login, the IG account id with Unified Login."""
+    return "me" if mode() == "instagram" else kv_get("ig_id", "")
+
+
+def api(method, path, params=None, body=None, tok=None, base=None):
     params = dict(params or {})
-    params["access_token"] = token()
-    r = requests.request(method, f"{GRAPH}/{path}", params=params, json=body, timeout=30)
+    params["access_token"] = tok or token()
+    base = base or (IG_GRAPH if mode() == "instagram" else FB_GRAPH)
+    r = requests.request(method, f"{base}/{path}", params=params, json=body, timeout=30)
     try:
         data = r.json()
     except ValueError:
@@ -251,14 +271,63 @@ def me(force=False):
     cached = kv_get("me")
     if cached and not force:
         return json.loads(cached)
-    data = api("GET", "me", {"fields": "user_id,username,name,followers_count,profile_picture_url"})
+    if mode() == "instagram":
+        data = api("GET", "me", {"fields": "user_id,username,name,followers_count,profile_picture_url"})
+    else:
+        if not kv_get("ig_id"):
+            raise ApiError("не найден ID аккаунта Instagram, подключи заново")
+        data = api("GET", kv_get("ig_id"), {"fields": "id,username,name,followers_count,profile_picture_url"})
+        data["user_id"] = data.get("id")
     kv_set("me", json.dumps(data))
     return data
 
 
+FIELDS = "comments,messages,messaging_postbacks"
+
+
 def subscribe_webhooks():
-    return api("POST", "me/subscribed_apps",
-               {"subscribed_fields": "comments,messages,messaging_postbacks"})
+    out = api("POST", f"{acct()}/subscribed_apps", {"subscribed_fields": FIELDS})
+    if mode() == "facebook" and meta("app_id") and meta("app_secret") and CFG.get("DOMAIN"):
+        # app-level subscription: same as filling "Configure webhooks" in the dashboard by hand
+        api("POST", f"{meta('app_id')}/subscriptions",
+            {"object": "instagram", "callback_url": f"https://{CFG['DOMAIN']}/webhook",
+             "verify_token": CFG.get("VERIFY_TOKEN", ""), "fields": FIELDS, "include_values": "true"},
+            tok=f"{meta('app_id')}|{meta('app_secret')}", base=FB_GRAPH)
+    return out
+
+
+def login_url(redirect_uri, state):
+    from urllib.parse import urlencode
+    q = {"client_id": meta("app_id"), "config_id": meta("config_id"), "redirect_uri": redirect_uri,
+         "response_type": "code", "override_default_response_type": "true", "state": state}
+    return f"https://www.facebook.com/{FB_VERSION}/dialog/oauth?" + urlencode(q)
+
+
+def connect_with_code(code, redirect_uri):
+    """Unified Login: exchange the dialog code for a system user token, find the IG account, subscribe."""
+    r = requests.get(f"{FB_GRAPH}/oauth/access_token",
+                     params={"client_id": meta("app_id"), "client_secret": meta("app_secret"),
+                             "redirect_uri": redirect_uri, "code": code}, timeout=30)
+    data = r.json()
+    if "access_token" not in data:
+        raise ApiError(str(data.get("error", data))[:300])
+    return use_fb_token(data["access_token"], data.get("expires_in"))
+
+
+def use_fb_token(tok, expires_in=None):
+    accounts = api("GET", "me/assigned_instagram_accounts", {"fields": "id,username"}, tok=tok,
+                   base=FB_GRAPH).get("data", [])
+    if not accounts:
+        raise ApiError("токен получен, но в нём нет аккаунта Instagram. Обычно не хватает разрешения "
+                       "business_management в конфигурации (Facebook Login for Business → Configurations).")
+    want = CFG.get("IG_USERNAME", "").lstrip("@").lower()
+    acc = next((a for a in accounts if a.get("username", "").lower() == want), accounts[0])
+    kv_set("api_mode", "facebook")
+    kv_set("token", tok)
+    kv_set("ig_id", acc["id"])
+    kv_set("token_refreshed_at", time.time())
+    kv_set("token_expires_at", time.time() + int(expires_in) if expires_in else "")
+    return acc
 
 
 def refresh_token():
@@ -274,10 +343,21 @@ def refresh_token():
     return data
 
 
+def connection_info():
+    return {"mode": mode(), "app_id": meta("app_id"), "config_id": meta("config_id"),
+            "has_secret": bool(meta("app_secret")), "ig_id": kv_get("ig_id", "")}
+
+
 def set_new_token(tok):
     """Store a pasted token. A short-lived one (1 hour, e.g. from an OAuth redirect) is exchanged
     for a long-lived 60-day token; a token from the dashboard "Generate token" is already long-lived."""
     tok = tok.strip()
+    try:  # a Unified Login (graph.facebook.com) token?
+        acc = use_fb_token(tok)
+        return f"токен Unified Login, аккаунт @{acc.get('username')}"
+    except Exception:
+        pass
+    kv_set("api_mode", "instagram")
     note = "долгий токен (60 дней)"
     secret = CFG.get("IG_APP_SECRET")
     expires_in = 60 * 86400
@@ -301,7 +381,7 @@ def reply_comment(comment_id, text):
 
 def send_dm(recipient, message):
     """recipient: {"id": igsid} or {"comment_id": id} (private reply, once per comment, 7 days)."""
-    return api("POST", "me/messages", body={"recipient": recipient, "message": message})
+    return api("POST", f"{acct()}/messages", body={"recipient": recipient, "message": message})
 
 
 def user_profile(igsid):
@@ -309,7 +389,7 @@ def user_profile(igsid):
 
 
 def media_list(limit=25):
-    return api("GET", "me/media", {"fields": "id,caption,media_type,media_product_type,permalink,timestamp,thumbnail_url,media_url",
+    return api("GET", f"{acct()}/media", {"fields": "id,caption,media_type,media_product_type,permalink,timestamp,thumbnail_url,media_url",
                                    "limit": limit}).get("data", [])
 
 
@@ -321,8 +401,7 @@ def verify_signature(raw_body, header):
     if not header or not header.startswith("sha256="):
         return False
     sent = header.split("=", 1)[1]
-    for key in ("IG_APP_SECRET", "META_APP_SECRET"):
-        secret = CFG.get(key)
+    for secret in (CFG.get("IG_APP_SECRET"), meta("app_secret")):
         if secret:
             good = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
             if hmac.compare_digest(good, sent):
@@ -597,7 +676,7 @@ def maintenance():
     while True:
         try:
             last = float(kv_get("token_refreshed_at", "0") or 0)
-            if token() and time.time() - last > 7 * 86400:
+            if token() and mode() == "instagram" and time.time() - last > 7 * 86400:
                 refresh_token()
                 add_event("token", "refreshed")
         except Exception as e:

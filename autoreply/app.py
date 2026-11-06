@@ -142,7 +142,8 @@ def dashboard():
         events=core.recent_events(40), s=core.settings(),
         last_webhook=core.kv_get("last_webhook_at"), token_refreshed=core.kv_get("token_refreshed_at"),
         token_days_left=int((float(exp) - now) / 86400) if exp else None,
-        rules=core.get_rules())
+        rules=core.get_rules(), conn=core.connection_info(),
+        redirect_uri=redirect_uri())
 
 
 @app.get("/admin/log")
@@ -181,6 +182,55 @@ def rule_edit(rule_id=None):
     return render_template("rule.html", rule=rule, rule_id=rule_id, media=media)
 
 
+def redirect_uri():
+    return f"https://{core.CFG.get('DOMAIN') or request.host}/auth/callback"
+
+
+@app.post("/admin/meta-app")
+@login_required
+def save_meta_app():
+    for k in ("app_id", "app_secret", "config_id"):
+        v = request.form.get(k, "").strip()
+        if v:
+            core.kv_set("meta_" + k, v)
+    flash("Данные приложения Meta сохранены.")
+    return redirect(url_for("dashboard"))
+
+
+@app.get("/admin/connect")
+@login_required
+def connect():
+    if not (core.meta("app_id") and core.meta("app_secret") and core.meta("config_id")):
+        flash("Сначала заполни App ID, App Secret и Configuration ID.")
+        return redirect(url_for("dashboard"))
+    session["oauth_state"] = secrets.token_urlsafe(16)
+    return redirect(core.login_url(redirect_uri(), session["oauth_state"]))
+
+
+@app.get("/auth/callback")
+def oauth_callback():
+    if not session.get("auth"):
+        return redirect(url_for("login"))
+    if request.args.get("error") or not request.args.get("code"):
+        flash("Вход отменён: " + (request.args.get("error_description") or request.args.get("error") or "нет кода"))
+        return redirect(url_for("dashboard"))
+    if not hmac.compare_digest(request.args.get("state", ""), session.pop("oauth_state", "-")):
+        abort(400)
+    try:
+        acc = core.connect_with_code(request.args["code"], redirect_uri())
+        core.me(force=True)
+        msg = f"Подключено: @{acc.get('username')}."
+        try:
+            core.subscribe_webhooks()
+            msg += " Вебхуки подписаны."
+        except Exception as e:
+            msg += f" Вебхуки подписать не удалось: {e}"
+        flash(msg)
+    except Exception as e:
+        flash(f"Ошибка подключения: {e}")
+    return redirect(url_for("dashboard"))
+
+
 @app.post("/admin/settings")
 @login_required
 def save_settings():
@@ -210,8 +260,11 @@ def save_token():
             core.subscribe_webhooks()
             flash(f"Токен сохранён ({note}), аккаунт @{acc.get('username')}, вебхуки подписаны.")
         elif action == "refresh":
-            core.refresh_token()
-            flash("Токен продлён на 60 дней.")
+            if core.mode() == "facebook":
+                flash("Токен Unified Login бессрочный, продлевать не нужно.")
+            else:
+                core.refresh_token()
+                flash("Токен продлён на 60 дней.")
         elif action == "subscribe":
             core.subscribe_webhooks()
             core.me(force=True)

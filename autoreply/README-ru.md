@@ -19,25 +19,24 @@
    В конце печатает **пароль панели**, **Callback URL** и **Verify token**. Сохрани их.
 3. Проверка: https://hushhold.uk открывается с замочком, https://hushhold.uk/admin просит пароль.
 
-## Шаг 5. Приложение Meta и токен
+## Шаг 5. Приложение Meta и подключение (Unified login)
 
-1. [developers.facebook.com/apps](https://developers.facebook.com/apps) → **Create app**.
-   Имя, например `Hush Hold Replies`. Сценарий (use case): **Manage messaging & content on Instagram**.
-   Бизнес-портфолио можно не выбирать.
-2. В приложении: Use cases → Instagram → **API setup with Instagram login**.
-3. Наверху страницы видны **Instagram app ID** и **Instagram app secret**. Секрет впиши на сервере:
-   `nano /opt/hush-autoreply/config.env` → строка `IG_APP_SECRET=...` → Ctrl+O, Enter, Ctrl+X →
-   `systemctl restart hush-autoreply`.
-4. Блок **Generate access tokens** → Add account → войди в @hush_hold → **Generate token** → скопируй.
-   Вставь в панели: Аккаунт → «Токен и вебхуки» → Сохранить токен. Панель сама подпишет аккаунт
-   на события и дальше будет продлевать токен (живёт 60 дней, продлевается раз в 7).
-5. Блок **Configure webhooks**: Callback URL `https://hushhold.uk/webhook`, Verify token из вывода
-   скрипта → **Verify and save**. Ниже включи поля **comments**, **messages**, **messaging_postbacks**.
-6. App settings → Basic: Privacy Policy URL `https://hushhold.uk/privacy`,
-   User data deletion `https://hushhold.uk/data-deletion`, категория, иконка → Save.
-   (Почту для этих страниц можно указать в config.env, строка CONTACT_EMAIL.)
-7. В Instagram на телефоне: Настройки → Сообщения и ответы на истории → Управление сообщениями →
-   Подключённые инструменты → **Разрешить доступ к сообщениям** (у тебя уже включено для ManyChat).
+С осени 2026 новым приложениям Meta даёт только «API setup with Unified login». Токен у него бессрочный.
+
+1. [developers.facebook.com/apps](https://developers.facebook.com/apps) → Create app → use case
+   **Manage messaging & content on Instagram** → подключи бизнес-портфолио Hush&hold.
+2. Настройки приложения → Основное: скопируй **App ID** и **App Secret**. Там же впиши
+   Privacy Policy URL `https://hushhold.uk/privacy` и User data deletion `https://hushhold.uk/data-deletion` → Сохранить.
+3. Use cases → Instagram API → **API setup with Unified login**:
+   - URL переадресации: `https://hushhold.uk/auth/callback` → Сохранить.
+   - **Создать новую конфигурацию**: вариант «Общие», маркер системного пользователя, срок «Никогда»,
+     объект «Аккаунт Instagram», разрешения `instagram_basic`, `instagram_manage_comments`,
+     `instagram_manage_messages`. Скопируй **ID конфигурации**.
+4. Панель https://hushhold.uk/admin → «Подключение через Meta» → впиши App ID, App Secret, Configuration ID →
+   Сохранить → **Подключить Instagram** → войди, выбери портфолио и @hush_hold.
+   Панель сама найдёт аккаунт и подпишет вебхуки (на уровне приложения и аккаунта).
+5. Если панель пишет «в токене нет аккаунта Instagram»: добавь продукт Facebook Login for Business →
+   Configurations → Edit (та же конфигурация) → добавь `business_management` → подключи заново.
 
 ## Шаг 6–7. Обработчик и панель
 
