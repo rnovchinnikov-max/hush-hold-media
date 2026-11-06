@@ -216,6 +216,9 @@ def settings():
         "test_mode": kv_get("test_mode", "0") == "1",
         "test_usernames": kv_get("test_usernames", ""),
         "replies_per_hour": int(kv_get("replies_per_hour", "150")),
+        "polling": kv_get("polling", "1") == "1",
+        "last_poll_at": kv_get("last_poll_at"),
+        "last_poll_error": kv_get("last_poll_error", ""),
     }
 
 
@@ -540,6 +543,55 @@ def worker():
             add_event("error", "exception", detail=json.dumps(payload)[:900])
 
 
+def parse_ts(iso):
+    try:
+        return dt.datetime.strptime(iso, "%Y-%m-%dT%H:%M:%S%z").timestamp()
+    except (TypeError, ValueError):
+        return 0
+
+
+def poll_comments(since):
+    """Fallback for webhooks: read fresh comments on recent posts through the API.
+    Handles the same way as a webhook; first_time() keeps webhook + poll from answering twice."""
+    own_id = str(me().get("user_id", ""))
+    found = 0
+    for m in media_list(int(kv_get("poll_media", "8"))):
+        url, pages = f"{m['id']}/comments", 0
+        params = {"fields": "id,text,timestamp,from,username", "limit": 50}
+        while url and pages < 4:
+            data = api("GET", url, params)
+            pages += 1
+            for c in data.get("data", []):
+                if parse_ts(c.get("timestamp")) < since:
+                    continue
+                frm = c.get("from") or {"id": "", "username": c.get("username", "")}
+                found += 1
+                handle_comment({"id": c["id"], "text": c.get("text", ""), "from": frm,
+                                "media": {"id": m["id"]}}, own_id)
+            nxt = (data.get("paging") or {}).get("cursors", {}).get("after")
+            url = url if nxt and (data.get("paging") or {}).get("next") else None
+            params = dict(params, after=nxt) if nxt else params
+    return found
+
+
+def poller():
+    if not kv_get("poll_since"):
+        kv_set("poll_since", time.time())
+    while True:
+        time.sleep(int(kv_get("poll_every", "60")))
+        if not token() or kv_get("polling", "1") != "1":
+            continue
+        started = time.time()
+        try:
+            since = max(float(kv_get("poll_since")), float(kv_get("last_poll_at") or 0) - 600)
+            poll_comments(since)
+            kv_set("last_poll_at", started)
+            kv_set("last_poll_error", "")
+        except Exception as e:
+            kv_set("last_poll_error", str(e)[:300])
+            log.warning("poll failed: %s", e)
+
+
 def maintenance():
     """Refresh the token every 7 days so it never reaches its 60-day expiry."""
     while True:
@@ -572,6 +624,7 @@ def start_background():
     init_db()
     threading.Thread(target=worker, daemon=True).start()
     threading.Thread(target=maintenance, daemon=True).start()
+    threading.Thread(target=poller, daemon=True).start()
 
 
 def fmt_time(ts):

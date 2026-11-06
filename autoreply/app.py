@@ -186,6 +186,7 @@ def rule_edit(rule_id=None):
 def save_settings():
     core.kv_set("paused", "1" if request.form.get("paused") else "0")
     core.kv_set("test_mode", "1" if request.form.get("test_mode") else "0")
+    core.kv_set("polling", "1" if request.form.get("polling") else "0")
     core.kv_set("test_usernames", request.form.get("test_usernames", "").strip())
     try:
         core.kv_set("replies_per_hour", max(1, int(request.form.get("replies_per_hour", "150"))))
@@ -215,6 +216,18 @@ def save_token():
             core.subscribe_webhooks()
             core.me(force=True)
             flash("Аккаунт подписан на вебхуки (comments, messages, messaging_postbacks).")
+    except Exception as e:
+        flash(f"Ошибка: {e}")
+    return redirect(url_for("dashboard"))
+
+
+@app.post("/admin/catch-up")
+@login_required
+def catch_up():
+    hours = max(1, min(168, int(request.form.get("hours", "24") or 24)))
+    try:
+        n = core.poll_comments(time.time() - hours * 3600)
+        flash(f"Проверено комментариев за {hours} ч: {n}. Подходящие обработаны, смотри журнал.")
     except Exception as e:
         flash(f"Ошибка: {e}")
     return redirect(url_for("dashboard"))

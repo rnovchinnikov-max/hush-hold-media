@@ -28,9 +28,13 @@
 <form method="post" action="{{ url_for('save_settings') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
 <label class="check"><input type="checkbox" name="paused" {% if s.paused %}checked{% endif %}> Пауза (ничего не отвечать)</label>
 <label class="check"><input type="checkbox" name="test_mode" {% if s.test_mode %}checked{% endif %}> Тестовый режим: только записывать в журнал, ничего не отправлять</label>
+<label class="check"><input type="checkbox" name="polling" {% if s.polling %}checked{% endif %}> Проверять новые комментарии раз в минуту через API (страховка, если вебхук не пришёл)</label>
+<p class="small mute">Последняя проверка: {{ s.last_poll_at|t if s.last_poll_at else 'ещё не было' }}{% if s.last_poll_error %} · <span class="err">{{ s.last_poll_error }}</span>{% endif %}</p>
 <label>Отвечать только этим аккаунтам (для теста, через запятую; пусто = всем)</label><input type="text" name="test_usernames" value="{{ s.test_usernames }}" placeholder="my_test_account">
 <label>Максимум публичных ответов в час</label><input type="number" name="replies_per_hour" value="{{ s.replies_per_hour }}" style="max-width:140px">
 <p><button>Сохранить</button></p></form>
+<form method="post" action="{{ url_for('catch_up') }}" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="number" name="hours" value="24" style="max-width:90px"><button class="ghost" onclick="return confirm('Ответить на подходящие комментарии за это время? Те, кому уже ответил ManyChat, получат сообщение повторно.')">Ответить на пропущенные за N часов</button></form><br>
 <form method="post" action="{{ url_for('test_dm') }}" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
 <input type="text" name="text" value="SLEEP please!" style="max-width:260px"><button class="ghost">Симулировать комментарий</button></form></div>
 
