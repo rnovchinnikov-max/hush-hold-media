@@ -352,11 +352,12 @@ def set_new_token(tok):
     """Store a pasted token. A short-lived one (1 hour, e.g. from an OAuth redirect) is exchanged
     for a long-lived 60-day token; a token from the dashboard "Generate token" is already long-lived."""
     tok = tok.strip()
-    try:  # a Unified Login (graph.facebook.com) token?
+    try:  # a Unified Login / system user (graph.facebook.com) token?
         acc = use_fb_token(tok)
-        return f"токен Unified Login, аккаунт @{acc.get('username')}"
+        return f"бессрочный токен Meta, аккаунт @{acc.get('username')}"
     except Exception:
-        pass
+        if tok.startswith("EAA"):  # Facebook-type token: show the real reason instead of guessing further
+            raise
     kv_set("api_mode", "instagram")
     note = "долгий токен (60 дней)"
     secret = CFG.get("IG_APP_SECRET")
