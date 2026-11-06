@@ -314,12 +314,56 @@ def connect_with_code(code, redirect_uri):
     return use_fb_token(data["access_token"], data.get("expires_in"))
 
 
+def _try(fn, notes, label):
+    try:
+        return fn()
+    except Exception as e:
+        notes.append(f"{label}: {e}")
+        return None
+
+
+def find_ig_accounts(tok, notes):
+    """Find the Instagram account a Meta token can act for. Tries several routes, because which one
+    works depends on the token type and the permissions Meta actually granted."""
+    g = lambda path, params=None: api("GET", path, params or {}, tok=tok, base=FB_GRAPH)
+    found = {}
+    data = _try(lambda: g("me/assigned_instagram_accounts", {"fields": "id,username"}), notes, "assigned")
+    for a in (data or {}).get("data", []):
+        found[a["id"]] = a.get("username", "")
+    if not found:
+        data = _try(lambda: g("me/accounts", {"fields": "id,name,instagram_business_account{id,username}"}), notes, "pages")
+        for p in (data or {}).get("data", []):
+            a = p.get("instagram_business_account")
+            if a:
+                found[a["id"]] = a.get("username", "")
+    if not found and meta("app_id") and meta("app_secret"):
+        dbg = _try(lambda: api("GET", "debug_token", {"input_token": tok},
+                               tok=f"{meta('app_id')}|{meta('app_secret')}", base=FB_GRAPH), notes, "debug")
+        d = (dbg or {}).get("data", {})
+        notes.append("type=%s scopes=%s" % (d.get("type"), ",".join(d.get("scopes", []))))
+        for sc in d.get("granular_scopes", []):
+            if sc.get("scope", "").startswith("instagram"):
+                for tid in sc.get("target_ids", []):
+                    found.setdefault(tid, "")
+    manual = kv_get("ig_id_manual") or CFG.get("IG_USER_ID", "")
+    if manual:
+        found = {manual: found.get(manual, "")} | found
+    out = []
+    for ig_id, uname in found.items():
+        info = _try(lambda: g(ig_id, {"fields": "id,username"}), notes, f"check {ig_id}")
+        if info:
+            out.append({"id": ig_id, "username": info.get("username", uname)})
+    return out
+
+
 def use_fb_token(tok, expires_in=None):
-    accounts = api("GET", "me/assigned_instagram_accounts", {"fields": "id,username"}, tok=tok,
-                   base=FB_GRAPH).get("data", [])
+    notes = []
+    accounts = find_ig_accounts(tok, notes)
     if not accounts:
-        raise ApiError("токен получен, но в нём нет аккаунта Instagram. Обычно не хватает разрешения "
-                       "business_management в конфигурации (Facebook Login for Business → Configurations).")
+        detail = " | ".join(notes)[:700]
+        add_event("connect", "error", detail=detail)
+        raise ApiError("токен получен, но аккаунт Instagram через него недоступен. Подробности в журнале "
+                       "(событие connect): " + detail[:300])
     want = CFG.get("IG_USERNAME", "").lstrip("@").lower()
     acc = next((a for a in accounts if a.get("username", "").lower() == want), accounts[0])
     kv_set("api_mode", "facebook")
@@ -327,6 +371,7 @@ def use_fb_token(tok, expires_in=None):
     kv_set("ig_id", acc["id"])
     kv_set("token_refreshed_at", time.time())
     kv_set("token_expires_at", time.time() + int(expires_in) if expires_in else "")
+    add_event("connect", "ok", username=acc.get("username", ""), detail=" | ".join(notes)[:700])
     return acc
 
 
@@ -345,7 +390,8 @@ def refresh_token():
 
 def connection_info():
     return {"mode": mode(), "app_id": meta("app_id"), "config_id": meta("config_id"),
-            "has_secret": bool(meta("app_secret")), "ig_id": kv_get("ig_id", "")}
+            "has_secret": bool(meta("app_secret")), "ig_id": kv_get("ig_id", ""),
+            "ig_id_manual": kv_get("ig_id_manual", "")}
 
 
 def set_new_token(tok):

@@ -189,6 +189,8 @@ def redirect_uri():
 @app.post("/admin/meta-app")
 @login_required
 def save_meta_app():
+    if request.form.get("ig_id_manual") is not None:
+        core.kv_set("ig_id_manual", request.form.get("ig_id_manual", "").strip())
     for k in ("app_id", "app_secret", "config_id"):
         v = request.form.get(k, "").strip()
         if v:

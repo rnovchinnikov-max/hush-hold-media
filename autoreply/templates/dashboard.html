@@ -11,6 +11,7 @@
 <label>App ID (Настройки приложения → Основное)</label><input type="text" name="app_id" value="{{ conn.app_id }}">
 <label>App Secret {% if conn.has_secret %}<span class="ok small">сохранён</span>{% endif %}</label><input type="password" name="app_secret" autocomplete="off" placeholder="{{ '••••••••' if conn.has_secret else '' }}">
 <label>Configuration ID (API setup with Unified login → конфигурация)</label><input type="text" name="config_id" value="{{ conn.config_id }}">
+<label>ID аккаунта Instagram (необязательно, если панель не находит его сама)</label><input type="text" name="ig_id_manual" value="{{ conn.ig_id_manual }}" placeholder="например 17841400000000000">
 <p class="row"><button class="ghost">Сохранить</button> <a class="btn" href="{{ url_for('connect') }}">Подключить Instagram</a></p></form>
 </details>
 <details><summary class="small">Токен вручную и вебхуки</summary>
