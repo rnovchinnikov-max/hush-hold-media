@@ -474,8 +474,7 @@ def send_dm(recipient, message):
     routes = [lambda: api("POST", f"{acct()}/messages", body=body)]
     if pid:
         via_page = lambda: api("POST", f"{pid}/messages", body=body, tok=ptok)
-        # private replies already work through the IG account; regular DMs go through the Page first
-        routes = routes + [via_page] if "comment_id" in recipient else [via_page] + routes
+        routes = routes + [via_page]  # the IG-account route is proven; the Page route is only a fallback
     err = None
     for r in routes:
         try:
@@ -777,11 +776,14 @@ def poll_messages(since):
         return 0
     own_id = str(me().get("user_id", ""))
     fields = "id,updated_time,messages.limit(5){id,created_time,from,message}"
-    pid, ptok = page()
-    if pid:
-        data = api("GET", f"{pid}/conversations", {"platform": "instagram", "fields": fields, "limit": 20}, tok=ptok)
-    else:
+    ptok = None  # the IG-account route is proven to work for reading DMs; the Page route is the fallback
+    try:
         data = api("GET", f"{acct()}/conversations", {"platform": "instagram", "fields": fields, "limit": 20})
+    except ApiError:
+        pid, ptok = page()
+        if not pid:
+            raise
+        data = api("GET", f"{pid}/conversations", {"platform": "instagram", "fields": fields, "limit": 20}, tok=ptok)
     found = 0
     for conv in data.get("data", []):
         if parse_ts(conv.get("updated_time")) < since:
