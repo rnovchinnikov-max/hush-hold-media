@@ -159,6 +159,13 @@ def first_time(key):
         con.close()
 
 
+def unhandle(key):
+    con = db()
+    con.execute("delete from handled where key=?", (key,))
+    con.commit()
+    con.close()
+
+
 def get_rules(enabled_only=False):
     con = db()
     sql = "select * from rules" + (" where enabled=1" if enabled_only else "") + " order by id"
@@ -566,11 +573,13 @@ def handle_comment(value, own_id):
               comment_id=comment_id, text=text)
     if s["paused"]:
         add_event("comment", "paused", **ev)
+        unhandle(f"comment:{comment_id}")  # so "answer missed comments" can pick it up later
         return
     if s["test_usernames"]:
         allowed = [u.strip().lstrip("@").lower() for u in s["test_usernames"].split(",") if u.strip()]
         if username.lower() not in allowed:
             add_event("comment", "skipped_not_tester", **ev)
+            unhandle(f"comment:{comment_id}")
             return
     if not first_time(f"user_media_rule:{user_id}:{media_id}:{rule['id']}"):
         add_event("comment", "duplicate_user", **ev)
