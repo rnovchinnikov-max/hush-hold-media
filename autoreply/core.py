@@ -762,6 +762,18 @@ def parse_ts(iso):
         return 0
 
 
+def reopen_skipped(since):
+    """Comments skipped by pause/tester filter before can be answered by a catch-up run."""
+    con = db()
+    rows = con.execute("select distinct comment_id from events where kind='comment' and status in"
+                       " ('skipped_not_tester','paused') and at>=? and comment_id!=''", (since,)).fetchall()
+    for (cid,) in rows:
+        con.execute("delete from handled where key=?", (f"comment:{cid}",))
+    con.commit()
+    con.close()
+    return len(rows)
+
+
 def poll_comments(since):
     """Fallback for webhooks: read fresh comments on recent posts through the API.
     Handles the same way as a webhook; first_time() keeps webhook + poll from answering twice."""

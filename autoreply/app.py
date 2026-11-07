@@ -303,6 +303,7 @@ def debug_page():
 def catch_up():
     hours = max(1, min(168, int(request.form.get("hours", "24") or 24)))
     try:
+        core.reopen_skipped(time.time() - hours * 3600)
         n = core.poll_comments(time.time() - hours * 3600)
         try:
             d = core.poll_messages(time.time() - hours * 3600)
