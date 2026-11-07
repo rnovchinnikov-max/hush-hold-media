@@ -843,6 +843,8 @@ def poller():
         except Exception as e:
             kv_set("last_poll_error", str(e)[:300])
             log.warning("poll failed: %s", e)
+            if "blocked" in str(e).lower() or "(code 4/" in str(e) or "(code 32/" in str(e):
+                time.sleep(1800)  # Meta blocked or rate-limited the app: back off instead of hammering
 
 
 def maintenance():
