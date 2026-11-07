@@ -644,6 +644,13 @@ def deliver_reward(rule, igsid, username, source):
             send_dm({"id": igsid}, {"text": rule["reward_text"]})
             add_event("reward", "ok", detail=source, **ev)
         else:
+            con = db()
+            n = con.execute("select count(*) from events where kind='reward' and status='not_following' and user_id=?"
+                            " and rule_id=? and at>=?", (igsid, rule["id"], time.time() - 86400)).fetchone()[0]
+            con.close()
+            if n >= 3:  # no more than 3 "please follow" messages per person per day
+                add_event("reward", "not_following_limit", detail=source, **ev)
+                return
             send_dm({"id": igsid}, {"text": rule["not_following_text"],
                                     "quick_replies": button(rule["recheck_title"] or "I followed", rule["id"])})
             add_event("reward", "not_following", detail=source, **ev)
