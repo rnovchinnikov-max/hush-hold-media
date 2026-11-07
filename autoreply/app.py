@@ -268,6 +268,10 @@ def save_token():
                 core.refresh_token()
                 flash("Токен продлён на 60 дней.")
         elif action == "subscribe":
+            if core.mode() == "facebook":
+                notes = []
+                core.find_page(core.token(), core.kv_get("ig_id", ""), notes)
+                flash("Страница Facebook: " + " | ".join(notes)[-200:])
             core.subscribe_webhooks()
             core.me(force=True)
             flash("Аккаунт подписан на вебхуки (comments, messages, messaging_postbacks).")

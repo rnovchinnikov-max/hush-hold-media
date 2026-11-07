@@ -287,6 +287,12 @@ FIELDS = "comments,messages,messaging_postbacks"
 
 def subscribe_webhooks():
     out = api("POST", f"{acct()}/subscribed_apps", {"subscribed_fields": FIELDS})
+    pid, ptok = page()
+    if pid:  # Page-level subscription carries Instagram messaging webhooks on the classic route
+        try:
+            api("POST", f"{pid}/subscribed_apps", {"subscribed_fields": "messages,messaging_postbacks"}, tok=ptok)
+        except ApiError as e:
+            add_event("webhook", "page_subscribe_error", detail=e)
     if mode() == "facebook" and meta("app_id") and meta("app_secret") and CFG.get("DOMAIN"):
         # app-level subscription: same as filling "Configure webhooks" in the dashboard by hand
         api("POST", f"{meta('app_id')}/subscriptions",
@@ -371,8 +377,31 @@ def use_fb_token(tok, expires_in=None):
     kv_set("ig_id", acc["id"])
     kv_set("token_refreshed_at", time.time())
     kv_set("token_expires_at", time.time() + int(expires_in) if expires_in else "")
+    find_page(tok, acc["id"], notes)
     add_event("connect", "ok", username=acc.get("username", ""), detail=" | ".join(notes)[:700])
     return acc
+
+
+def find_page(tok, ig_id, notes):
+    """If the token can see the Facebook Page linked to the IG account, keep its Page token:
+    Instagram DMs through the Page (classic Messenger Platform route) work for more setups."""
+    kv_set("page_id", "")
+    kv_set("page_token", "")
+    data = _try(lambda: api("GET", "me/accounts", {"fields": "id,name,access_token,instagram_business_account"},
+                            tok=tok, base=FB_GRAPH), notes, "page")
+    for p in (data or {}).get("data", []):
+        if (p.get("instagram_business_account") or {}).get("id") == ig_id and p.get("access_token"):
+            kv_set("page_id", p["id"])
+            kv_set("page_token", p["access_token"])
+            notes.append(f"page {p.get('name')} ({p['id']}) linked")
+            return p
+    notes.append("page not found (DMs via IG account)")
+    return None
+
+
+def page():
+    pid, ptok = kv_get("page_id", ""), kv_get("page_token", "")
+    return (pid, ptok) if mode() == "facebook" and pid and ptok else (None, None)
 
 
 def refresh_token():
@@ -428,11 +457,26 @@ def reply_comment(comment_id, text):
 
 def send_dm(recipient, message):
     """recipient: {"id": igsid} or {"comment_id": id} (private reply, once per comment, 7 days)."""
-    return api("POST", f"{acct()}/messages", body={"recipient": recipient, "message": message})
+    body = {"recipient": recipient, "message": message}
+    pid, ptok = page()
+    routes = [lambda: api("POST", f"{acct()}/messages", body=body)]
+    if pid:
+        via_page = lambda: api("POST", f"{pid}/messages", body=body, tok=ptok)
+        # private replies already work through the IG account; regular DMs go through the Page first
+        routes = routes + [via_page] if "comment_id" in recipient else [via_page] + routes
+    err = None
+    for r in routes:
+        try:
+            return r()
+        except ApiError as e:
+            err = e
+    raise err
 
 
 def user_profile(igsid):
-    return api("GET", igsid, {"fields": "username,name,is_user_follow_business,is_business_follow_user"})
+    pid, ptok = page()
+    return api("GET", igsid, {"fields": "username,name,is_user_follow_business,is_business_follow_user"},
+               tok=ptok or None)
 
 
 def media_list(limit=25):
@@ -721,7 +765,11 @@ def poll_messages(since):
         return 0
     own_id = str(me().get("user_id", ""))
     fields = "id,updated_time,messages.limit(5){id,created_time,from,message}"
-    data = api("GET", f"{acct()}/conversations", {"platform": "instagram", "fields": fields, "limit": 20})
+    pid, ptok = page()
+    if pid:
+        data = api("GET", f"{pid}/conversations", {"platform": "instagram", "fields": fields, "limit": 20}, tok=ptok)
+    else:
+        data = api("GET", f"{acct()}/conversations", {"platform": "instagram", "fields": fields, "limit": 20})
     found = 0
     for conv in data.get("data", []):
         if parse_ts(conv.get("updated_time")) < since:
@@ -730,7 +778,7 @@ def poll_messages(since):
             if parse_ts(m.get("created_time")) < since:
                 continue
             if "message" not in m or "from" not in m:
-                m = api("GET", m["id"], {"fields": "id,created_time,from,message"})
+                m = api("GET", m["id"], {"fields": "id,created_time,from,message"}, tok=ptok or None)
             frm = (m.get("from") or {}).get("id", "")
             if not frm or frm == own_id:
                 continue
@@ -756,6 +804,15 @@ def debug_dump():
     if convs:
         call("first conversation messages", "GET", convs[0]["id"], {"fields": "messages.limit(5){id,created_time,from,to,message}"})
     call("subscribed_apps", "GET", f"{a}/subscribed_apps")
+    pid, ptok = page()
+    out["page"] = {"page_id": pid or "не найдена"}
+    if pid:
+        try:
+            out["page conversations"] = api("GET", f"{pid}/conversations",
+                                            {"platform": "instagram", "fields": "id,updated_time", "limit": 5}, tok=ptok)
+            out["page subscribed_apps"] = api("GET", f"{pid}/subscribed_apps", tok=ptok)
+        except Exception as e:
+            out["page error"] = str(e)
     if meta("app_id") and meta("app_secret"):
         try:
             out["app subscriptions"] = api("GET", f"{meta('app_id')}/subscriptions", {},
