@@ -383,19 +383,30 @@ def use_fb_token(tok, expires_in=None):
 
 
 def find_page(tok, ig_id, notes):
-    """If the token can see the Facebook Page linked to the IG account, keep its Page token:
-    Instagram DMs through the Page (classic Messenger Platform route) work for more setups."""
+    """Find the Facebook Page linked to the IG account and keep its Page token. Needed for the
+    follower check (and DMs on the classic route). Tries the manual Page ID first, then /me/accounts."""
     kv_set("page_id", "")
     kv_set("page_token", "")
-    data = _try(lambda: api("GET", "me/accounts", {"fields": "id,name,access_token,instagram_business_account"},
-                            tok=tok, base=FB_GRAPH), notes, "page")
-    for p in (data or {}).get("data", []):
-        if (p.get("instagram_business_account") or {}).get("id") == ig_id and p.get("access_token"):
-            kv_set("page_id", p["id"])
-            kv_set("page_token", p["access_token"])
-            notes.append(f"page {p.get('name')} ({p['id']}) linked")
-            return p
-    notes.append("page not found (DMs via IG account)")
+    g = lambda path, params: api("GET", path, params, tok=tok, base=FB_GRAPH)
+    candidates = []
+    manual = kv_get("page_id_manual", "")
+    if manual:
+        p = _try(lambda: g(manual, {"fields": "id,name,access_token,instagram_business_account"}), notes, "page manual")
+        if p:
+            candidates.append(p)
+    data = _try(lambda: g("me/accounts", {"fields": "id,name,access_token,instagram_business_account"}), notes, "pages")
+    candidates += (data or {}).get("data", [])
+    with_token = [p for p in candidates if p.get("access_token")]
+    notes.append("pages seen: " + ", ".join(f"{p.get('name')}({p.get('id')}, ig={(p.get('instagram_business_account') or {}).get('id', '-')}, token={'yes' if p.get('access_token') else 'no'})" for p in candidates))
+    pick = next((p for p in with_token if (p.get("instagram_business_account") or {}).get("id") == ig_id), None)
+    if not pick and len(with_token) == 1:
+        pick = with_token[0]  # one Page only: assume it is the linked one
+    if pick:
+        kv_set("page_id", pick["id"])
+        kv_set("page_token", pick["access_token"])
+        notes.append(f"page {pick.get('name')} ({pick['id']}) linked")
+        return pick
+    notes.append("page not found")
     return None
 
 
@@ -420,7 +431,8 @@ def refresh_token():
 def connection_info():
     return {"mode": mode(), "app_id": meta("app_id"), "config_id": meta("config_id"),
             "has_secret": bool(meta("app_secret")), "ig_id": kv_get("ig_id", ""),
-            "ig_id_manual": kv_get("ig_id_manual", "")}
+            "ig_id_manual": kv_get("ig_id_manual", ""),
+            "page_id_manual": kv_get("page_id_manual", ""), "page_id": kv_get("page_id", "")}
 
 
 def set_new_token(tok):
