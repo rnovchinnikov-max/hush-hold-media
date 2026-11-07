@@ -284,7 +284,15 @@ def save_token():
 @login_required
 def debug_page():
     from markupsafe import escape
-    body = json.dumps(core.debug_dump(), ensure_ascii=False, indent=1)
+    def clean(x):  # drop paging links: Meta puts the access token inside them
+        if isinstance(x, dict):
+            return {k: clean(v) for k, v in x.items() if k != "paging"}
+        if isinstance(x, list):
+            return [clean(v) for v in x]
+        if isinstance(x, str) and "access_token=" in x:
+            return "[скрыто]"
+        return x
+    body = json.dumps(clean(core.debug_dump()), ensure_ascii=False, indent=1)
     return f"<pre style='white-space:pre-wrap;font-size:12px'>{escape(body)}</pre>"
 
 
