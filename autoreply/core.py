@@ -477,6 +477,8 @@ def reply_comment(comment_id, text):
 def send_dm(recipient, message):
     """recipient: {"id": igsid} or {"comment_id": id} (private reply, once per comment, 7 days)."""
     body = {"recipient": recipient, "message": message}
+    if message.get("quick_replies"):
+        kv_set("dm_hot_until", time.time() + 600)
     pid, ptok = page()
     routes = [lambda: api("POST", f"{acct()}/messages", body=body)]
     if pid:
@@ -806,7 +808,7 @@ def poll_messages(since):
     fields = "id,updated_time,messages.limit(5){id,created_time,from,message}"
     ptok = None  # the IG-account route is proven to work for reading DMs; the Page route is the fallback
     try:
-        data = api("GET", f"{acct()}/conversations", {"platform": "instagram", "fields": fields, "limit": 20})
+        data = api("GET", f"{acct()}/conversations", {"platform": "instagram", "fields": fields, "limit": 10})
     except ApiError:
         pid, ptok = page()
         if not pid:
@@ -875,11 +877,6 @@ def poller():
         try:
             since = max(float(kv_get("poll_since")), float(kv_get("last_poll_at") or 0) - 600)
             poll_comments(since)
-            try:
-                poll_messages(since)
-                kv_set("last_dm_poll_error", "")
-            except Exception as e:
-                kv_set("last_dm_poll_error", str(e)[:300])
             kv_set("last_poll_at", started)
             kv_set("last_poll_error", "")
         except Exception as e:
@@ -887,6 +884,26 @@ def poller():
             log.warning("poll failed: %s", e)
             if "blocked" in str(e).lower() or "(code 4/" in str(e) or "(code 32/" in str(e):
                 time.sleep(1800)  # Meta blocked or rate-limited the app: back off instead of hammering
+
+
+def dm_poller():
+    """Read DMs: every 4 s for 10 minutes after we sent a button (someone is about to tap it),
+    otherwise once a minute. Keeps button taps fast without hammering the API all day."""
+    last = time.time() - 600
+    while True:
+        hot = time.time() < float(kv_get("dm_hot_until") or 0)
+        time.sleep(4 if hot else 60)
+        if not token() or kv_get("polling", "1") != "1" or mode() != "facebook":
+            continue
+        started = time.time()
+        try:
+            poll_messages(max(float(kv_get("poll_since") or 0), last - 120))
+            last = started
+            kv_set("last_dm_poll_error", "")
+        except Exception as e:
+            kv_set("last_dm_poll_error", str(e)[:300])
+            if "blocked" in str(e).lower() or "(code 4/" in str(e) or "(code 32/" in str(e):
+                time.sleep(1800)
 
 
 def maintenance():
@@ -922,6 +939,7 @@ def start_background():
     threading.Thread(target=worker, daemon=True).start()
     threading.Thread(target=maintenance, daemon=True).start()
     threading.Thread(target=poller, daemon=True).start()
+    threading.Thread(target=dm_poller, daemon=True).start()
 
 
 def fmt_time(ts):
