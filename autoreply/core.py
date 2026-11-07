@@ -652,6 +652,15 @@ def process(payload):
     except Exception as e:
         own_id = ""
         log.warning("me() failed: %s", e)
+    try:
+        kinds = []
+        for entry in payload.get("entry", []):
+            kinds += [ch.get("field", "?") for ch in entry.get("changes", [])]
+            kinds += ["messaging:" + ",".join(k for k in m if k not in ("sender", "recipient", "timestamp"))
+                      for m in entry.get("messaging", [])]
+        add_event("webhook", "received", detail=f"{payload.get('object')} {' '.join(kinds)} | {json.dumps(payload, ensure_ascii=False)[:600]}")
+    except Exception:
+        pass
     for entry in payload.get("entry", []):
         for ch in entry.get("changes", []):
             if ch.get("field") == "comments":
@@ -729,6 +738,31 @@ def poll_messages(since):
             handle_message({"sender": {"id": frm}, "message": {"mid": m["id"], "text": m.get("message", "")}},
                            own_id)
     return found
+
+
+def debug_dump():
+    """Raw answers from Meta for troubleshooting DMs (shown in the panel)."""
+    out = {}
+    def call(label, method, path, params=None):
+        try:
+            out[label] = api(method, path, params)
+        except Exception as e:
+            out[label] = {"error": str(e)}
+    a = acct()
+    call("conversations", "GET", f"{a}/conversations", {"platform": "instagram", "fields": "id,updated_time,participants", "limit": 10})
+    call("conversations+messages", "GET", f"{a}/conversations",
+         {"platform": "instagram", "fields": "id,updated_time,messages.limit(5){id,created_time,from,message}", "limit": 5})
+    convs = (out.get("conversations") or {}).get("data") or []
+    if convs:
+        call("first conversation messages", "GET", convs[0]["id"], {"fields": "messages.limit(5){id,created_time,from,to,message}"})
+    call("subscribed_apps", "GET", f"{a}/subscribed_apps")
+    if meta("app_id") and meta("app_secret"):
+        try:
+            out["app subscriptions"] = api("GET", f"{meta('app_id')}/subscriptions", {},
+                                           tok=f"{meta('app_id')}|{meta('app_secret')}", base=FB_GRAPH)
+        except Exception as e:
+            out["app subscriptions"] = {"error": str(e)}
+    return out
 
 
 def poller():

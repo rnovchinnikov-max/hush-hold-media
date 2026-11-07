@@ -276,6 +276,14 @@ def save_token():
     return redirect(url_for("dashboard"))
 
 
+@app.get("/admin/debug")
+@login_required
+def debug_page():
+    from markupsafe import escape
+    body = json.dumps(core.debug_dump(), ensure_ascii=False, indent=1)
+    return f"<pre style='white-space:pre-wrap;font-size:12px'>{escape(body)}</pre>"
+
+
 @app.post("/admin/catch-up")
 @login_required
 def catch_up():
