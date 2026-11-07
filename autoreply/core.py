@@ -223,7 +223,7 @@ def settings():
         "replies_per_hour": int(kv_get("replies_per_hour", "150")),
         "polling": kv_get("polling", "1") == "1",
         "last_poll_at": kv_get("last_poll_at"),
-        "last_poll_error": kv_get("last_poll_error", ""),
+        "last_poll_error": (kv_get("last_poll_error", "") + " " + (("директ: " + kv_get("last_dm_poll_error", "")) if kv_get("last_dm_poll_error") else "")).strip(),
     }
 
 
@@ -620,7 +620,13 @@ def handle_message(m, own_id):
     if payload.startswith("RULE:"):
         rule = get_rule(int(payload.split(":", 1)[1] or 0))
     elif text:
-        rule = next((r for r in get_rules(True) if matches(r, text)), None)
+        # a button tap read back through the API arrives as plain text equal to the button title
+        rule = next((r for r in get_rules(True)
+                     if norm(text) in (norm(r["button_title"]), norm(r["recheck_title"]))), None)
+        if rule:
+            payload = f"RULE:{rule['id']}"
+        else:
+            rule = next((r for r in get_rules(True) if matches(r, text)), None)
     if not rule or not rule["enabled"]:
         add_event("message", "no_match", user_id=sender, text=text or payload)
         return
@@ -700,6 +706,31 @@ def poll_comments(since):
     return found
 
 
+def poll_messages(since):
+    """Fallback for messaging webhooks: read recent DMs through the Conversations API."""
+    if mode() != "facebook":
+        return 0
+    own_id = str(me().get("user_id", ""))
+    fields = "id,updated_time,messages.limit(5){id,created_time,from,message}"
+    data = api("GET", f"{acct()}/conversations", {"platform": "instagram", "fields": fields, "limit": 20})
+    found = 0
+    for conv in data.get("data", []):
+        if parse_ts(conv.get("updated_time")) < since:
+            continue
+        for m in (conv.get("messages") or {}).get("data", []):
+            if parse_ts(m.get("created_time")) < since:
+                continue
+            if "message" not in m or "from" not in m:
+                m = api("GET", m["id"], {"fields": "id,created_time,from,message"})
+            frm = (m.get("from") or {}).get("id", "")
+            if not frm or frm == own_id:
+                continue
+            found += 1
+            handle_message({"sender": {"id": frm}, "message": {"mid": m["id"], "text": m.get("message", "")}},
+                           own_id)
+    return found
+
+
 def poller():
     if not kv_get("poll_since"):
         kv_set("poll_since", time.time())
@@ -711,6 +742,11 @@ def poller():
         try:
             since = max(float(kv_get("poll_since")), float(kv_get("last_poll_at") or 0) - 600)
             poll_comments(since)
+            try:
+                poll_messages(since)
+                kv_set("last_dm_poll_error", "")
+            except Exception as e:
+                kv_set("last_dm_poll_error", str(e)[:300])
             kv_set("last_poll_at", started)
             kv_set("last_poll_error", "")
         except Exception as e:

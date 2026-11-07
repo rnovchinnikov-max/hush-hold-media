@@ -282,7 +282,11 @@ def catch_up():
     hours = max(1, min(168, int(request.form.get("hours", "24") or 24)))
     try:
         n = core.poll_comments(time.time() - hours * 3600)
-        flash(f"Проверено комментариев за {hours} ч: {n}. Подходящие обработаны, смотри журнал.")
+        try:
+            d = core.poll_messages(time.time() - hours * 3600)
+        except Exception as e:
+            d = f"ошибка ({e})"
+        flash(f"За {hours} ч проверено комментариев: {n}, сообщений в директе: {d}. Подходящие обработаны, смотри журнал.")
     except Exception as e:
         flash(f"Ошибка: {e}")
     return redirect(url_for("dashboard"))
