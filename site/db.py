@@ -215,6 +215,8 @@ SUPPORT_BLOCKS = [
               "Safe, checked tips | Every tip checked against safe sleep guidance.\n"
               "Time for your DMs | More time to answer your questions.",
      "numbered": False, "columns": 3, "dark": True},
+    {"type": "instagram", "title": "Follow along on Instagram",
+     "text": "New sleep tips every week, and the easiest way to say hi.", "button_text": "Follow"},
     {"type": "quote", "text": "Thank you. Sleep well tonight.", "dark": True},
 ]
 
