@@ -106,15 +106,16 @@
         </div>
       {% endif %}
       {% set w = b.widget_width or 250 %}{% set h = b.widget_height or 80 %}
+      {% set shape = b.widget_shape or 'pill' %}
       <div class="widget-frame">
         {% if b.single_widget %}
-          {% if b.widget_usd %}<iframe title="lava.top payment" src="{{ b.widget_usd }}" width="{{ w }}" height="{{ h }}" style="border:none;max-width:100%" allow="payment"></iframe>
+          {% if b.widget_usd %}<span class="widget-clip shape-{{ shape }}" style="width:{{ w }}px;height:{{ h }}px"><iframe title="lava.top payment" src="{{ b.widget_usd }}" width="{{ w }}" height="{{ h }}" allow="payment"></iframe></span>
           {% else %}<p class="soon">Payment is coming soon.</p>{% endif %}
         {% else %}
         {% for cur, src in [('USD', b.widget_usd), ('EUR', b.widget_eur)] %}
           <div class="only-{{ cur|lower }}">
             {% if src %}
-              <iframe title="lava.top payment {{ cur }}" data-src="{{ src }}" width="{{ w }}" height="{{ h }}" style="border:none;max-width:100%" allow="payment"></iframe>
+              <span class="widget-clip shape-{{ shape }}" style="width:{{ w }}px;height:{{ h }}px"><iframe title="lava.top payment {{ cur }}" data-src="{{ src }}" width="{{ w }}" height="{{ h }}" allow="payment"></iframe></span>
             {% else %}
               <p class="soon">Payment in {{ cur }} is coming soon.<br>Please switch currency above.</p>
             {% endif %}

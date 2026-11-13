@@ -100,9 +100,16 @@ html[data-cur=USD] .only-eur,html[data-cur=EUR] .only-usd{display:none!important
 .price span{display:flex;align-items:baseline;gap:14px}
 .price s{color:var(--muted);font-size:24px}
 .price b{font-family:var(--font-h);font-weight:400;font-size:64px;line-height:1;color:var(--accent)}
-.widget-frame{position:relative;padding:14px;border-radius:calc(var(--radius) + 4px);background:var(--bg);border:2px solid var(--accent);box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 15%,transparent),0 12px 50px color-mix(in srgb,var(--accent) 40%,transparent);animation:pulse 2.6s ease-in-out infinite;max-width:100%}
-.widget-frame iframe{display:block;margin:0 auto}
-.soon{margin:0;padding:10px 18px;color:var(--muted);font-size:15px}
+.widget-frame{position:relative;max-width:100%;display:flex;justify-content:center;filter:drop-shadow(0 0 18px color-mix(in srgb,var(--accent) 45%,transparent));animation:glow 2.6s ease-in-out infinite}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 14px color-mix(in srgb,var(--accent) 35%,transparent))}50%{filter:drop-shadow(0 0 28px color-mix(in srgb,var(--accent) 65%,transparent))}}
+/* lava.top draws its button on a white square iframe: clip the iframe to the button's shape */
+.widget-clip{display:block;max-width:100%;overflow:hidden;isolation:isolate;line-height:0;
+}
+.widget-clip iframe{display:block;border:0;max-width:100%}
+.shape-pill{border-radius:999px;clip-path:inset(2px round 999px)}.shape-pill iframe{border-radius:999px}
+.shape-round{border-radius:12px;clip-path:inset(2px round 12px)}.shape-round iframe{border-radius:12px}
+
+.soon{margin:0;padding:14px 22px;color:var(--muted);font-size:15px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)}
 .agree{margin:0;color:var(--muted);font-size:13px;max-width:30em}.agree a{color:var(--muted)}
 .note{margin:0;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:6px}
 

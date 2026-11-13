@@ -59,6 +59,7 @@ BLOCK_TYPES = {
             ("single_widget", "bool", "Один виджет без выбора валюты (берётся из поля USD), например для донатов"),
             ("widget_usd", "widget", "Виджет lava.top для USD (вставь код iframe или ссылку)"),
             ("widget_eur", "widget", "Виджет lava.top для EUR"),
+            ("widget_shape", "choice:pill=Таблетка (обрезать белые углы),round=Скруглённые углы,none=Без обрезки", "Форма кнопки виджета"),
             ("widget_width", "int", "Ширина виджета, px"),
             ("widget_height", "int", "Высота виджета, px"),
             ("note", "line", "Мелкая подпись под виджетом"),
