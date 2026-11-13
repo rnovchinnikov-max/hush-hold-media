@@ -75,6 +75,9 @@ create index if not exists events_at on events(at);
 create table if not exists handled(key text primary key, at real);
 """
 
+OLD_PAY_URL = "https://app.lava.top/products/0657f576-a3d7-406f-a6d2-c390e7bf918b"
+SITE_URL = "https://hushhold.uk/"
+
 DEFAULT_RULE = dict(
     name="SLEEP → promo code",
     enabled=1,
@@ -93,7 +96,7 @@ DEFAULT_RULE = dict(
     button_title="Get my code 💛",
     reward_text=("Here it is! 🌙 Promo code: MOMSHELP\n"
                  "It's a limited-time personal discount, so don't wait too long.\n"
-                 "👉 https://app.lava.top/products/0657f576-a3d7-406f-a6d2-c390e7bf918b\n"
+                 "👉 " + SITE_URL + "\n"
                  "Questions? Just reply here 💛"),
     not_following_text=("The discount is just for my followers 💛 Follow @hush_hold, "
                         "then tap the button below and I'll send your code right away."),
@@ -114,6 +117,10 @@ def init_db():
         cols = ",".join(DEFAULT_RULE)
         con.execute(f"insert into rules({cols}) values({','.join('?' * len(DEFAULT_RULE))})",
                     list(DEFAULT_RULE.values()))
+    # one-time switch (2026-11-13): reward link now points to our own website
+    if not con.execute("select 1 from kv where k='migr_site_link'").fetchone():
+        con.execute("update rules set reward_text=replace(reward_text, ?, ?)", (OLD_PAY_URL, SITE_URL))
+        con.execute("insert or replace into kv(k, v) values('migr_site_link', '1')")
     con.commit()
     con.close()
     if not kv_get("token") and CFG.get("IG_ACCESS_TOKEN"):
