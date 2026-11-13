@@ -37,7 +37,7 @@
         <span>{{ S.instagram_handle or 'Instagram' }}</span>
       </a>
       {% endif %}
-      {% include "_cur.html" %}
+      {% if show_cur %}{% include "_cur.html" %}{% endif %}
     </nav>
   </div>
 </header>

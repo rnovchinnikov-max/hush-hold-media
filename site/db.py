@@ -208,8 +208,8 @@ SUPPORT_BLOCKS = [
      "button_text": "", "button_link": "#buy", "show_old_price": False},
     {"type": "pay", "title": "Send a little thank-you", "text": "Any amount means a lot to me.",
      "price_usd": "", "old_usd": "", "price_eur": "", "old_eur": "",
-     "label_usd": "Donate in USD", "label_eur": "Donate in EUR",
-     "widget_usd": "", "widget_eur": "", "widget_width": 250, "widget_height": 80,
+     "label_usd": "Donate in USD", "label_eur": "Donate in EUR", "single_widget": True,
+     "widget_usd": "https://widget.lava.top/993edc1a-17e3-4bc8-8d1f-e4bbd3bc0c4b", "widget_eur": "", "widget_width": 250, "widget_height": 80,
      "note": "Secure payment through lava.top"},
     {"type": "cards", "kicker": "", "title": "Where your support goes", "text": "",
      "items": "More free posts | Weekly carousels and reels for tired parents.\n"

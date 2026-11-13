@@ -51,6 +51,10 @@ def security_headers(resp):
     return resp
 
 
+def needs_currency(page):
+    return any(b.get("type") == "pay" and not b.get("single_widget") for b in page["blocks"])
+
+
 def page_price(page):
     for b in page["blocks"]:
         if b.get("type") == "pay" and (b.get("price_usd") or b.get("price_eur")):
@@ -71,7 +75,8 @@ def home():
     page = db.home_page()
     if not page:
         abort(404)
-    return render_template("page.html", page=page, price=page_price(page), is_home=True)
+    return render_template("page.html", page=page, price=page_price(page), is_home=True,
+                           show_cur=needs_currency(page))
 
 
 @app.get("/<slug>")
@@ -82,7 +87,8 @@ def page(slug):
         abort(404)
     if p["is_home"]:
         return redirect(url_for("home"), 301)
-    return render_template("page.html", page=p, price=page_price(p), is_home=False)
+    return render_template("page.html", page=p, price=page_price(p), is_home=False,
+                           show_cur=needs_currency(p))
 
 
 @app.get("/uploads/<path:name>")

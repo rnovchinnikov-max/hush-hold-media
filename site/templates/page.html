@@ -98,7 +98,7 @@
     <div class="pay stack center">
       {% if b.title %}<h2 class="h2">{{ title_html(b.title) }}</h2>{% endif %}
       {% if b.text %}<p class="sub">{{ b.text|inline }}</p>{% endif %}
-      {% with usd_label=b.label_usd, eur_label=b.label_eur, big=True %}{% include "_cur.html" %}{% endwith %}
+      {% if not b.single_widget %}{% with usd_label=b.label_usd, eur_label=b.label_eur, big=True %}{% include "_cur.html" %}{% endwith %}{% endif %}
       {% if b.price_usd or b.price_eur %}
         <div class="price">
           <span class="only-usd">{% if b.old_usd %}<s>{{ b.old_usd }}</s>{% endif %}<b>{{ b.price_usd }}</b></span>
@@ -107,6 +107,10 @@
       {% endif %}
       {% set w = b.widget_width or 250 %}{% set h = b.widget_height or 80 %}
       <div class="widget-frame">
+        {% if b.single_widget %}
+          {% if b.widget_usd %}<iframe title="lava.top payment" src="{{ b.widget_usd }}" width="{{ w }}" height="{{ h }}" style="border:none;max-width:100%" allow="payment"></iframe>
+          {% else %}<p class="soon">Payment is coming soon.</p>{% endif %}
+        {% else %}
         {% for cur, src in [('USD', b.widget_usd), ('EUR', b.widget_eur)] %}
           <div class="only-{{ cur|lower }}">
             {% if src %}
@@ -116,6 +120,7 @@
             {% endif %}
           </div>
         {% endfor %}
+        {% endif %}
       </div>
       {% if b.note %}<p class="note"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> {{ b.note }}</p>{% endif %}
     </div>

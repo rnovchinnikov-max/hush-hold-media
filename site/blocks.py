@@ -56,6 +56,7 @@ BLOCK_TYPES = {
             ("old_eur", "line", "Старая цена в EUR"),
             ("label_usd", "line", "Кнопка валюты USD"),
             ("label_eur", "line", "Кнопка валюты EUR"),
+            ("single_widget", "bool", "Один виджет без выбора валюты (берётся из поля USD), например для донатов"),
             ("widget_usd", "widget", "Виджет lava.top для USD (вставь код iframe или ссылку)"),
             ("widget_eur", "widget", "Виджет lava.top для EUR"),
             ("widget_width", "int", "Ширина виджета, px"),
