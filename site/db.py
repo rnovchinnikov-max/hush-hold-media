@@ -48,6 +48,18 @@ def init():
                     (p["slug"], p["title"], p["nav_label"], p["description"], p["is_home"], p["priority"],
                      1, 1, json.dumps(p["blocks"], ensure_ascii=False)),
                 )
+        # legal pages (added once, also on sites installed before they existed)
+        if not con.execute("SELECT 1 FROM settings WHERE key='legal_seeded'").fetchone():
+            from legal import LEGAL_PAGES
+            for n, p in enumerate(LEGAL_PAGES):
+                if con.execute("SELECT 1 FROM pages WHERE slug=?", (p["slug"],)).fetchone():
+                    continue
+                con.execute(
+                    "INSERT INTO pages(slug,title,nav_label,description,is_home,priority,show_in_nav,published,blocks)"
+                    " VALUES (?,?,?,?,0,?,0,1,?)",
+                    (p["slug"], p["title"], p["nav_label"], p["description"], 90 + n,
+                     json.dumps(p["blocks"], ensure_ascii=False)))
+            con.execute("INSERT INTO settings(key,value) VALUES('legal_seeded','true')")
 
 
 # ---------- settings ----------
@@ -86,6 +98,11 @@ def list_pages():
 
 def nav_pages():
     return [p for p in list_pages() if p["published"] and p["show_in_nav"]]
+
+
+def footer_pages():
+    """Published pages hidden from the main menu (legal pages) go to the footer."""
+    return [p for p in list_pages() if p["published"] and not p["show_in_nav"] and not p["is_home"]]
 
 
 def get_page(page_id=None, slug=None):
@@ -153,6 +170,9 @@ DEFAULT_SETTINGS = {
     "instagram_handle": "@hush_hold",
     "default_currency": "USD",
     "footer_text": DISCLAIMER,
+    "seller_name": "",
+    "contact_email": "",
+    "seller_country": "",
     "theme": preset(DEFAULT_PRESET),
 }
 

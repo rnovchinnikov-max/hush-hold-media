@@ -103,6 +103,7 @@ html[data-cur=USD] .only-eur,html[data-cur=EUR] .only-usd{display:none!important
 .widget-frame{position:relative;padding:14px;border-radius:calc(var(--radius) + 4px);background:var(--bg);border:2px solid var(--accent);box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 15%,transparent),0 12px 50px color-mix(in srgb,var(--accent) 40%,transparent);animation:pulse 2.6s ease-in-out infinite;max-width:100%}
 .widget-frame iframe{display:block;margin:0 auto}
 .soon{margin:0;padding:10px 18px;color:var(--muted);font-size:15px}
+.agree{margin:0;color:var(--muted);font-size:13px;max-width:30em}.agree a{color:var(--muted)}
 .note{margin:0;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:6px}
 
 /* faq, quote */

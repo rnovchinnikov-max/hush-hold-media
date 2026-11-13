@@ -79,7 +79,17 @@ def page_price(page):
 def inject():
     s = db.get_settings()
     return {"S": s, "T": s["theme"], "fonts_url": google_fonts_url(s["theme"]), "nav": db.nav_pages(),
-            "ADMIN": ADMIN_PREFIX, "csrf": csrf_token()}
+            "footer_pages": db.footer_pages(), "ADMIN": ADMIN_PREFIX, "csrf": csrf_token()}
+
+
+@app.template_filter("fill")
+def fill(text):
+    """Put seller details from Настройки into page text."""
+    s = db.get_settings()
+    for key, empty in (("seller_name", "[seller name]"), ("contact_email", "[contact email]"),
+                       ("seller_country", "[country]"), ("brand_name", "Hush & Hold")):
+        text = (text or "").replace("{" + key + "}", s.get(key) or empty)
+    return text.replace("{brand}", s.get("brand_name") or "Hush & Hold")
 
 
 # ---------------- public ----------------
@@ -349,6 +359,9 @@ def admin_settings():
             "instagram_handle": (f.get("instagram_handle") or "").strip()[:40],
             "default_currency": "EUR" if f.get("default_currency") == "EUR" else "USD",
             "footer_text": (f.get("footer_text") or "").strip()[:1000],
+            "seller_name": (f.get("seller_name") or "").strip()[:120],
+            "contact_email": (f.get("contact_email") or "").strip()[:120],
+            "seller_country": (f.get("seller_country") or "").strip()[:80],
         })
         flash("Настройки сохранены")
         return redirect(url_for("admin_settings"))

@@ -13,6 +13,10 @@
       </select></div>
     <div><label for="instagram_url">Ссылка на Instagram (кнопка в шапке)</label><input id="instagram_url" name="instagram_url" value="{{ S.instagram_url }}" placeholder="https://www.instagram.com/hush_hold/"></div>
     <div><label for="instagram_handle">Подпись кнопки Instagram</label><input id="instagram_handle" name="instagram_handle" value="{{ S.instagram_handle }}"></div>
+    <div class="full"><h2 style="margin:8px 0 0">Данные продавца для юридических страниц</h2><p class="hint" style="margin:4px 0 0">Подставляются в оферту, политику возвратов и конфиденциальности вместо {seller_name}, {contact_email}, {seller_country}. Без них lava.top не одобрит домен.</p></div>
+    <div><label for="seller_name">Продавец (ФИО или название, как в lava.top)</label><input id="seller_name" name="seller_name" value="{{ S.seller_name }}"></div>
+    <div><label for="contact_email">Email для покупателей</label><input id="contact_email" name="contact_email" type="email" value="{{ S.contact_email }}"></div>
+    <div><label for="seller_country">Страна продавца</label><input id="seller_country" name="seller_country" value="{{ S.seller_country }}"></div>
     <div class="full"><label for="footer_text">Текст внизу сайта (дисклеймер)</label><textarea id="footer_text" name="footer_text" rows="3">{{ S.footer_text }}</textarea></div>
   </div>
   <button class="primary" type="submit">Сохранить</button>

@@ -51,6 +51,10 @@
         {% for p in nav %}<a href="{{ '/' if p.is_home else '/' ~ p.slug }}">{{ p.nav_label or p.title }}</a>{% endfor %}
       </span>
     </div>
+    <div class="foot-row">
+      <span class="foot-links legal">{% for p in footer_pages %}<a href="/{{ p.slug }}">{{ p.title }}</a>{% endfor %}</span>
+      {% if S.contact_email %}<span>Contact: <a href="mailto:{{ S.contact_email }}">{{ S.contact_email }}</a></span>{% endif %}
+    </div>
     {% if S.footer_text %}<p>{{ S.footer_text }}</p>{% endif %}
     <p class="copy">© {{ S.brand_name }}</p>
   </div>
