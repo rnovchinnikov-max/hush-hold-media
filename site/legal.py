@@ -14,7 +14,7 @@ Digital guides about baby and toddler sleep, delivered as downloadable files. Th
 
 **2. Price and payment**
 
-Prices are shown in US dollars (USD) or euros (EUR). You choose the currency before paying. Payment is processed by our payment partner lava.top. We never see or store your card details. Your bank may charge its own fees for currency conversion.
+Prices are shown in US dollars (USD) or euros (EUR). You choose the currency before paying. Payment is processed by our payment partner lava.top under its own [Terms of Service](https://lava.top/en/docs/terms/) and [Privacy Policy](https://lava.top/en/docs/policy/). We never see or store your card details. Your bank may charge its own fees for currency conversion.
 
 **3. Delivery**
 

@@ -122,7 +122,7 @@
         {% endfor %}
         {% endif %}
       </div>
-      {% if footer_pages %}<p class="agree">By paying you agree to the {% for fp in footer_pages %}<a href="/{{ fp.slug }}">{{ fp.title }}</a>{{ ', ' if not loop.last and loop.revindex > 2 else (' and ' if not loop.last else '') }}{% endfor %}.</p>{% endif %}
+      {% if footer_pages %}<p class="agree">By paying you agree to the {% for fp in footer_pages %}<a href="/{{ fp.slug }}">{{ fp.title }}</a>{{ ', ' if not loop.last and loop.revindex > 2 else (' and ' if not loop.last else '') }}{% endfor %}, and the lava.top <a href="https://lava.top/en/docs/terms/" target="_blank" rel="noopener">Terms of Service</a> and <a href="https://lava.top/en/docs/policy/" target="_blank" rel="noopener">Privacy Policy</a>.</p>{% endif %}
       {% if b.note %}<p class="note"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> {{ b.note }}</p>{% endif %}
     </div>
   </div>
