@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}Стиль{% endblock %}
+{% block body %}
+<h1>Стиль сайта</h1>
+<form method="post" class="box">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>Готовые стили</h2>
+  <p class="hint">Один клик меняет все цвета и шрифты. Тексты и страницы не меняются. Потом можно подправить отдельные цвета ниже.</p>
+  <div class="presets">
+    {% for key, pr in presets.items() %}
+    <button type="submit" name="action" value="preset:{{ key }}" class="preset{% if theme.preset == key %} on{% endif %}" style="background:{{ pr.bg }};color:{{ pr.text }};border-color:{{ pr.border }}">
+      <span style="font-family:'{{ pr.font_heading }}',serif;font-size:20px">{{ pr.label }}</span>
+      <span class="sw"><i style="background:{{ pr.accent }}"></i><i style="background:{{ pr.kicker }}"></i><i style="background:{{ pr.surface }}"></i><i style="background:{{ pr.bg2 }}"></i></span>
+    </button>
+    {% endfor %}
+  </div>
+</form>
+
+<form method="post" class="box">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>Свои цвета и шрифты</h2>
+  <div class="grid3">
+    {% for key, label in keys %}
+    <div><label for="{{ key }}">{{ label }}</label><div class="row"><input type="color" id="{{ key }}" name="{{ key }}" value="{{ theme[key] }}"><code>{{ theme[key] }}</code></div></div>
+    {% endfor %}
+    {% for key, label in font_keys %}
+    <div><label for="{{ key }}">{{ label }}</label>
+      <select id="{{ key }}" name="{{ key }}">{% for f in fonts %}<option {% if theme[key] == f %}selected{% endif %}>{{ f }}</option>{% endfor %}</select>
+    </div>
+    {% endfor %}
+    <div><label for="radius">Скругление углов, px</label><input id="radius" name="radius" type="number" min="0" max="40" value="{{ theme.radius }}"></div>
+  </div>
+  <div class="checks">
+    <label><input type="checkbox" name="stars" {% if theme.stars %}checked{% endif %}> Звёздное небо на фоне</label>
+    <label><input type="checkbox" name="dark" {% if theme.dark %}checked{% endif %}> Тёмная тема (для полей ввода и прокрутки браузера)</label>
+  </div>
+  <button class="primary" type="submit">Сохранить стиль</button>
+</form>
+{% endblock %}

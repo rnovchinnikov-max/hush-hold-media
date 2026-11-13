@@ -1,0 +1,11 @@
+{% extends "admin/base.html" %}
+{% block title %}Вход{% endblock %}
+{% block body %}
+<form method="post" class="box login">
+  <h1>Вход в студию</h1>
+  {% if no_password %}<p class="flash error">Пароль не задан. Впиши SITE_ADMIN_PASSWORD в /opt/hush-site/config.env и перезапусти: systemctl restart hush-site</p>{% endif %}
+  <label for="password">Пароль</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+  <button class="primary" type="submit">Войти</button>
+</form>
+{% endblock %}

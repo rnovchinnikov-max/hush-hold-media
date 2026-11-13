@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }}{% if not is_home %} · {{ S.brand_name }}{% endif %}{% endblock %}
+{% block meta %}
+{% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+<meta property="og:title" content="{{ page.title }}">
+{% if page.description %}<meta property="og:description" content="{{ page.description }}">{% endif %}
+<meta property="og:type" content="website">
+{% for b in page.blocks if b.type in ('hero', 'image_text') and b.image %}{% if loop.first %}<meta property="og:image" content="{{ request.url_root.rstrip('/') }}{{ b.image }}">{% endif %}{% endfor %}
+{% endblock %}
+
+{% macro price_tag(p, show_old=True) -%}
+  {%- if p -%}
+  <span class="only-usd">{% if show_old and p.old_usd %}<s>{{ p.old_usd }}</s> {% endif %}{{ p.price_usd }}</span><span class="only-eur">{% if show_old and p.old_eur %}<s>{{ p.old_eur }}</s> {% endif %}{{ p.price_eur }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro title_html(t) %}{{ t|inline }}{% endmacro %}
+
+{% block body %}
+{% set ns = namespace(buy=false, bar='') %}
+{% for b in page.blocks %}
+{% set i = loop.index0 %}
+
+{% if b.type == 'hero' %}
+<section class="hero sky{% if not loop.first %} sec{% endif %}">
+  <div class="wrap center stack">
+    {% if b.image and b.image_style != 'none' %}
+      {% if b.image_style == 'cover' %}
+        <div class="hero-cover"><div class="glow"></div><img src="{{ b.image }}" alt="{{ page.title }}" width="380" height="537"></div>
+      {% else %}
+        <img class="hero-round" src="{{ b.image }}" alt="" width="440" height="440">
+      {% endif %}
+    {% endif %}
+    {% if b.kicker %}<span class="kicker">{{ b.kicker }}</span>{% endif %}
+    {% if loop.first %}<h1 class="h1">{{ title_html(b.title) }}</h1>{% else %}<h2 class="h1">{{ title_html(b.title) }}</h2>{% endif %}
+    {% if b.text %}<div class="lead">{{ b.text|rich }}</div>{% endif %}
+    {% if b.button_text %}
+      {% if not ns.bar %}{% set ns.bar = b.button_text %}{% endif %}
+      <div class="cta-row">
+        {% set label = b.button_text %}
+        {% if '{price}' in label and price %}
+          {% set parts = label.split('{price}') %}
+          <a class="btn btn-xl pulse" href="{{ b.button_link or '#buy' }}">{{ parts[0] }}<span class="only-usd">{{ price.price_usd }}</span><span class="only-eur">{{ price.price_eur }}</span>{{ parts[1] }}</a>
+        {% else %}
+          <a class="btn btn-xl pulse" href="{{ b.button_link or '#buy' }}">{{ label.replace('{price}', '') }}</a>
+        {% endif %}
+        {% if b.show_old_price and price and (price.old_usd or price.old_eur) %}
+          <span class="old"><s class="only-usd">{{ price.old_usd }}</s><s class="only-eur">{{ price.old_eur }}</s> launch price</span>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% elif b.type == 'cards' %}
+<section class="sec{% if b.dark %} alt{% endif %}">
+  <div class="wrap">
+    {% if b.kicker or b.title or b.text %}
+    <div class="sec-head center stack">
+      {% if b.kicker %}<span class="kicker">{{ b.kicker }}</span>{% endif %}
+      {% if b.title %}<h2 class="h2">{{ title_html(b.title) }}</h2>{% endif %}
+      {% if b.text %}<p class="sub">{{ b.text|inline }}</p>{% endif %}
+    </div>
+    {% endif %}
+    <div class="cards cols-{{ [[b.columns or 3, 1]|max, 4]|min }}">
+      {% for t, d in split_items(b['items']) %}
+      <div class="card">
+        {% if b.numbered %}<span class="num">{{ loop.index }}</span>{% endif %}
+        <h3>{{ t|inline }}</h3>
+        {% if d %}<p>{{ d|inline }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% elif b.type == 'image_text' %}
+<section class="sec{% if b.dark %} alt{% endif %}">
+  <div class="wrap split{% if b.image_right %} flip{% endif %}">
+    {% if b.image %}<img class="pic pic-{{ b.image_style or 'circle' }}" src="{{ b.image }}" alt="" loading="lazy" width="460" height="460">{% endif %}
+    <div class="stack">
+      {% if b.kicker %}<span class="kicker">{{ b.kicker }}</span>{% endif %}
+      {% if b.title %}<h2 class="h2">{{ title_html(b.title) }}</h2>{% endif %}
+      {% if b.text %}<div class="body">{{ b.text|rich }}</div>{% endif %}
+      {% if b.bullets %}
+      <ul class="stars-list">
+        {% for x in lines(b.bullets) %}<li><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><path d="M12 2l2.4 7.6H22l-6.2 4.6 2.4 7.6L12 17.2l-6.2 4.6 2.4-7.6L2 9.6h7.6z" fill="currentColor"/></svg>{{ x|inline }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% elif b.type == 'pay' %}
+<section class="sec sky pay-sec"{% if not ns.buy %} id="buy"{% endif %}>
+  {% set ns.buy = true %}
+  <div class="wrap">
+    <div class="pay stack center">
+      {% if b.title %}<h2 class="h2">{{ title_html(b.title) }}</h2>{% endif %}
+      {% if b.text %}<p class="sub">{{ b.text|inline }}</p>{% endif %}
+      {% with usd_label=b.label_usd, eur_label=b.label_eur, big=True %}{% include "_cur.html" %}{% endwith %}
+      {% if b.price_usd or b.price_eur %}
+        <div class="price">
+          <span class="only-usd">{% if b.old_usd %}<s>{{ b.old_usd }}</s>{% endif %}<b>{{ b.price_usd }}</b></span>
+          <span class="only-eur">{% if b.old_eur %}<s>{{ b.old_eur }}</s>{% endif %}<b>{{ b.price_eur }}</b></span>
+        </div>
+      {% endif %}
+      {% set w = b.widget_width or 250 %}{% set h = b.widget_height or 80 %}
+      <div class="widget-frame">
+        {% for cur, src in [('USD', b.widget_usd), ('EUR', b.widget_eur)] %}
+          <div class="only-{{ cur|lower }}">
+            {% if src %}
+              <iframe title="lava.top payment {{ cur }}" data-src="{{ src }}" width="{{ w }}" height="{{ h }}" style="border:none;max-width:100%" allow="payment"></iframe>
+            {% else %}
+              <p class="soon">Payment in {{ cur }} is coming soon.<br>Please switch currency above.</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      {% if b.note %}<p class="note"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> {{ b.note }}</p>{% endif %}
+    </div>
+  </div>
+</section>
+
+{% elif b.type == 'faq' %}
+<section class="sec">
+  <div class="wrap narrow">
+    {% if b.title %}<h2 class="h2 center">{{ title_html(b.title) }}</h2>{% endif %}
+    <div class="faq">
+      {% for q, a in split_items(b['items']) %}
+      <details><summary>{{ q|inline }}</summary><p>{{ a|inline }}</p></details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% elif b.type == 'quote' %}
+<section class="sec{% if b.dark %} alt{% endif %}">
+  <div class="wrap narrow"><p class="quote">{{ b.text|inline }}</p></div>
+</section>
+
+{% elif b.type == 'text' %}
+<section class="sec{% if b.dark %} alt{% endif %}">
+  <div class="wrap narrow prose">
+    {% if b.title %}{% if loop.first %}<h1 class="h2">{{ title_html(b.title) }}</h1>{% else %}<h2 class="h2">{{ title_html(b.title) }}</h2>{% endif %}{% endif %}
+    {{ b.body|rich }}
+  </div>
+</section>
+
+{% elif b.type == 'instagram' and S.instagram_url %}
+<section class="sec alt">
+  <div class="wrap center stack">
+    <svg class="ig-big" aria-hidden="true" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+    {% if b.title %}<h2 class="h2">{{ title_html(b.title) }}</h2>{% endif %}
+    {% if b.text %}<p class="sub">{{ b.text|inline }}</p>{% endif %}
+    <a class="btn btn-ghost" href="{{ S.instagram_url }}" target="_blank" rel="noopener">{{ b.button_text or 'Follow' }} {{ S.instagram_handle }}</a>
+  </div>
+</section>
+
+{% elif b.type == 'html' %}
+<section class="sec"><div class="wrap">{{ b.code|safe }}</div></section>
+{% endif %}
+{% endfor %}
+
+{% if price and ns.bar %}
+{% set parts = (ns.bar ~ ('' if '{price}' in ns.bar else ' · {price}')).split('{price}') %}
+<div class="buybar" id="buybar" hidden>
+  <a class="btn" href="#buy">{{ parts[0] }}<span class="only-usd">{{ price.price_usd }}</span><span class="only-eur">{{ price.price_eur }}</span>{{ parts[1] }}</a>
+</div>
+{% endif %}
+{% endblock %}

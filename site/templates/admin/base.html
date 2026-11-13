@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{% block title %}Студия{% endblock %} · {{ S.brand_name }}</title>
+<link rel="icon" href="{{ url_for('static', filename='img/moon.svg') }}" type="image/svg+xml">
+<link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v=3">
+</head>
+<body>
+{% if session.admin %}
+<header class="bar">
+  <a class="logo" href="{{ ADMIN }}">🌙 Студия сайта</a>
+  <nav>
+    <a href="{{ url_for('admin_pages') }}" {% if request.endpoint in ('admin_pages','admin_page_edit') %}class="on"{% endif %}>Страницы</a>
+    <a href="{{ url_for('admin_style') }}" {% if request.endpoint == 'admin_style' %}class="on"{% endif %}>Стиль</a>
+    <a href="{{ url_for('admin_files') }}" {% if request.endpoint == 'admin_files' %}class="on"{% endif %}>Картинки</a>
+    <a href="{{ url_for('admin_settings') }}" {% if request.endpoint == 'admin_settings' %}class="on"{% endif %}>Настройки</a>
+    <a href="/" target="_blank">Открыть сайт ↗</a>
+    <a href="{{ url_for('logout') }}">Выйти</a>
+  </nav>
+</header>
+{% endif %}
+<main class="main">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

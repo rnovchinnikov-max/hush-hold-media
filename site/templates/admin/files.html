@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}Картинки{% endblock %}
+{% block body %}
+<h1>Картинки</h1>
+<form method="post" enctype="multipart/form-data" class="box">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="files">Загрузить (jpg, png, webp, gif, svg, до 10 МБ)</label>
+  <input id="files" type="file" name="files" accept="image/*" multiple required>
+  <button class="primary" type="submit">Загрузить</button>
+  <p class="hint">После загрузки скопируй адрес картинки и вставь в поле картинки в блоке. Поле само подсказывает загруженные файлы.</p>
+</form>
+<div class="files">
+  {% for f in files %}
+  <figure class="box file">
+    <img src="{{ f }}" alt="" loading="lazy">
+    <figcaption><code>{{ f }}</code></figcaption>
+    {% if f.startswith('/uploads/') %}
+    <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="delete" value="{{ f }}"><button class="danger small" type="submit">Удалить</button></form>
+    {% endif %}
+  </figure>
+  {% endfor %}
+</div>
+{% endblock %}

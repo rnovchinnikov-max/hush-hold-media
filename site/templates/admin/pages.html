@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block title %}Страницы{% endblock %}
+{% block body %}
+<h1>Страницы</h1>
+<p class="hint">Главная страница открывается по адресу сайта без ничего (например hushhold.uk). Остальные идут по своему адресу. Приоритет задаёт порядок в меню: 1 идёт первой, потом 2, 3 и так далее.</p>
+
+<form method="post" action="{{ url_for('admin_pages_order') }}" class="box">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="table-wrap">
+  <table class="pages">
+    <thead><tr><th>Главная</th><th>Приоритет</th><th>Страница</th><th>Адрес</th><th>В меню</th><th>Статус</th><th></th></tr></thead>
+    <tbody>
+    {% for p in pages %}
+      <tr>
+        <td><input type="radio" name="home" value="{{ p.id }}" aria-label="Сделать главной: {{ p.title }}" {% if p.is_home %}checked{% endif %}></td>
+        <td><input class="num" type="number" name="priority_{{ p.id }}" value="{{ p.priority }}" min="0" max="999" aria-label="Приоритет {{ p.title }}"></td>
+        <td><a href="{{ url_for('admin_page_edit', page_id=p.id) }}"><b>{{ p.title }}</b></a>{% if p.is_home %} <span class="tag main">главная</span>{% endif %}</td>
+        <td><a href="{{ '/' if p.is_home else '/' ~ p.slug }}" target="_blank">{{ '/' if p.is_home else '/' ~ p.slug }}</a></td>
+        <td>{{ 'да' if p.show_in_nav else 'нет' }}</td>
+        <td>{% if p.published %}<span class="tag ok">опубликована</span>{% else %}<span class="tag off">черновик</span>{% endif %}</td>
+        <td><a class="btn" href="{{ url_for('admin_page_edit', page_id=p.id) }}">Редактировать</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <button class="primary" type="submit">Сохранить порядок и главную</button>
+</form>
+
+<form method="post" action="{{ url_for('admin_page_new') }}" class="box">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>Новая страница</h2>
+  <div class="grid2">
+    <div><label for="title">Название</label><input id="title" name="title" placeholder="About me" required></div>
+    <div>
+      <label for="template">С чего начать</label>
+      <select id="template" name="template">
+        <option value="blank">Пустая страница (заголовок + текст)</option>
+        <option value="copy">Копия существующей страницы</option>
+      </select>
+    </div>
+    <div>
+      <label for="copy_from">Какую копировать (если выбрана копия)</label>
+      <select id="copy_from" name="copy_from">{% for p in pages %}<option value="{{ p.id }}">{{ p.title }}</option>{% endfor %}</select>
+    </div>
+  </div>
+  <button class="primary" type="submit">Создать</button>
+</form>
+{% endblock %}

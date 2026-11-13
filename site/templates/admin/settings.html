@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block body %}
+<h1>Настройки</h1>
+<form method="post" class="box">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="grid2">
+    <div><label for="brand_name">Название бренда</label><input id="brand_name" name="brand_name" value="{{ S.brand_name }}"></div>
+    <div><label for="default_currency">Валюта по умолчанию</label>
+      <select id="default_currency" name="default_currency">
+        <option value="USD" {% if S.default_currency == 'USD' %}selected{% endif %}>USD</option>
+        <option value="EUR" {% if S.default_currency == 'EUR' %}selected{% endif %}>EUR</option>
+      </select></div>
+    <div><label for="instagram_url">Ссылка на Instagram (кнопка в шапке)</label><input id="instagram_url" name="instagram_url" value="{{ S.instagram_url }}" placeholder="https://www.instagram.com/hush_hold/"></div>
+    <div><label for="instagram_handle">Подпись кнопки Instagram</label><input id="instagram_handle" name="instagram_handle" value="{{ S.instagram_handle }}"></div>
+    <div class="full"><label for="footer_text">Текст внизу сайта (дисклеймер)</label><textarea id="footer_text" name="footer_text" rows="3">{{ S.footer_text }}</textarea></div>
+  </div>
+  <button class="primary" type="submit">Сохранить</button>
+</form>
+<div class="box hint">
+  <h2>Где что менять</h2>
+  <ul>
+    <li><b>Цены и виджеты lava.top</b>: Страницы → нужная страница → блок «Оплата / донат».</li>
+    <li><b>Пароль студии</b>: на сервере в файле /opt/hush-site/config.env (SITE_ADMIN_PASSWORD), затем <code>systemctl restart hush-site</code>.</li>
+  </ul>
+</div>
+{% endblock %}

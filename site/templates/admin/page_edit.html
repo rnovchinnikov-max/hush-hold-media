@@ -1,0 +1,99 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ p.title }}{% endblock %}
+{% block body %}
+<form method="post" id="pageform">
+  <button type="submit" name="action" value="save" hidden aria-hidden="true" tabindex="-1"></button>
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="block_count" value="{{ p.blocks|length }}">
+
+  <div class="head-row">
+    <h1>{{ p.title }}</h1>
+    <div class="row">
+      <a class="btn" href="{{ '/' if p.is_home else '/' ~ p.slug }}" target="_blank">Посмотреть ↗</a>
+      <button class="primary" type="submit" name="action" value="save">Сохранить</button>
+    </div>
+  </div>
+
+  <section class="box">
+    <h2>Страница</h2>
+    <div class="grid2">
+      <div><label for="title">Название (заголовок вкладки браузера)</label><input id="title" name="title" value="{{ p.title }}" required></div>
+      <div><label for="nav_label">Как называется в меню</label><input id="nav_label" name="nav_label" value="{{ p.nav_label }}"></div>
+      <div><label for="slug">Адрес: {{ request.host }}/<b>{{ p.slug }}</b></label><input id="slug" name="slug" value="{{ p.slug }}" pattern="[a-z0-9][a-z0-9-]*" required></div>
+      <div><label for="priority">Приоритет в меню (1 = первая)</label><input id="priority" name="priority" type="number" value="{{ p.priority }}" min="0" max="999"></div>
+      <div class="full"><label for="description">Описание для Google и превью ссылок</label><input id="description" name="description" value="{{ p.description }}" maxlength="300"></div>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" name="is_home" {% if p.is_home %}checked{% endif %}> Главная страница сайта</label>
+      <label><input type="checkbox" name="show_in_nav" {% if p.show_in_nav %}checked{% endif %}> Показывать в меню</label>
+      <label><input type="checkbox" name="published" {% if p.published %}checked{% endif %}> Опубликована (видна всем)</label>
+    </div>
+  </section>
+
+  <h2 class="blocks-title">Блоки страницы <span class="hint">сверху вниз, как на сайте</span></h2>
+  <datalist id="images">{% for im in images %}<option value="{{ im }}"></option>{% endfor %}</datalist>
+
+  {% for b in p.blocks %}
+  {% set i = loop.index0 %}
+  {% set t = types[b.type] %}
+  <fieldset class="box block" id="block-{{ i }}">
+    <input type="hidden" name="b{{ i }}_type" value="{{ b.type }}">
+    <legend><span class="bn">{{ loop.index }}</span> {{ t.label }}</legend>
+    <div class="block-tools">
+      <button type="submit" name="action" value="up:{{ i }}" {% if loop.first %}disabled{% endif %} aria-label="Поднять блок">↑</button>
+      <button type="submit" name="action" value="down:{{ i }}" {% if loop.last %}disabled{% endif %} aria-label="Опустить блок">↓</button>
+      <button type="submit" name="action" value="dup:{{ i }}">Копия</button>
+      <button type="submit" name="action" value="del:{{ i }}" class="danger" data-confirm="Удалить блок?">Удалить</button>
+    </div>
+    <div class="grid2">
+    {% for name, ftype, label in t.fields %}
+      {% set id = 'b' ~ i ~ '_' ~ name %}
+      {% set v = b.get(name, '') %}
+      {% if ftype == 'bool' %}
+        <label class="check"><input type="checkbox" id="{{ id }}" name="{{ id }}" {% if v %}checked{% endif %}> {{ label }}</label>
+      {% elif ftype in ('text', 'lines') %}
+        <div class="full"><label for="{{ id }}">{{ label }}</label><textarea id="{{ id }}" name="{{ id }}" rows="{{ 8 if ftype == 'lines' or name == 'code' else 4 }}">{{ v }}</textarea></div>
+      {% elif ftype == 'widget' %}
+        <div class="full"><label for="{{ id }}">{{ label }}</label><input id="{{ id }}" name="{{ id }}" value="{{ v }}" placeholder="&lt;iframe ... src=&quot;https://widget.lava.top/...&quot;&gt;&lt;/iframe&gt;"></div>
+      {% elif ftype == 'image' %}
+        <div class="full img-field">
+          <label for="{{ id }}">{{ label }}</label>
+          <div class="row"><input id="{{ id }}" name="{{ id }}" value="{{ v }}" list="images" placeholder="/uploads/photo.jpg">{% if v %}<img src="{{ v }}" alt="" class="thumb">{% endif %}</div>
+        </div>
+      {% elif ftype.startswith('choice:') %}
+        <div><label for="{{ id }}">{{ label }}</label><select id="{{ id }}" name="{{ id }}">{% for val, txt in choices(ftype) %}<option value="{{ val }}" {% if v == val %}selected{% endif %}>{{ txt }}</option>{% endfor %}</select></div>
+      {% elif ftype == 'int' %}
+        <div><label for="{{ id }}">{{ label }}</label><input id="{{ id }}" name="{{ id }}" type="number" value="{{ v }}"></div>
+      {% else %}
+        <div><label for="{{ id }}">{{ label }}</label><input id="{{ id }}" name="{{ id }}" value="{{ v }}"></div>
+      {% endif %}
+    {% endfor %}
+    </div>
+  </fieldset>
+  {% else %}
+  <p class="box hint">На странице пока нет блоков. Добавь первый ниже.</p>
+  {% endfor %}
+
+  <section class="box add">
+    <h2>Добавить блок</h2>
+    <div class="add-grid">
+      {% for key, t in types.items() %}<button type="submit" name="action" value="add:{{ key }}">+ {{ t.label }}</button>{% endfor %}
+    </div>
+  </section>
+
+  <div class="savebar"><button class="primary" type="submit" name="action" value="save">Сохранить страницу</button></div>
+</form>
+
+{% if not p.is_home %}
+<form method="post" action="{{ url_for('admin_page_delete', page_id=p.id) }}" class="box danger-zone">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button class="danger" type="submit" data-confirm="Удалить страницу «{{ p.title }}» насовсем?">Удалить страницу</button>
+</form>
+{% endif %}
+<script>
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-confirm]');
+  if (b && !window.confirm(b.getAttribute('data-confirm'))) e.preventDefault();
+});
+</script>
+{% endblock %}

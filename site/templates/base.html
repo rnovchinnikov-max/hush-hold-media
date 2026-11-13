@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-cur="{{ S.default_currency }}" data-default-cur="{{ S.default_currency }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}{{ S.brand_name }}{% endblock %}</title>
+{% block meta %}{% endblock %}
+<link rel="icon" href="{{ url_for('static', filename='img/moon.svg') }}" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+{% if fonts_url %}<link rel="stylesheet" href="{{ fonts_url }}">{% endif %}
+<style>
+:root{
+  --bg:{{ T.bg }};--bg2:{{ T.bg2 }};--surface:{{ T.surface }};--border:{{ T.border }};
+  --text:{{ T.text }};--muted:{{ T.muted }};--accent:{{ T.accent }};--accent-text:{{ T.accent_text }};
+  --kicker:{{ T.kicker }};--radius:{{ T.radius }}px;
+  --font-h:'{{ T.font_heading }}',Georgia,serif;--font-b:'{{ T.font_body }}',system-ui,-apple-system,sans-serif;
+  color-scheme:{{ 'dark' if T.dark else 'light' }};
+}
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}?v=3">
+</head>
+<body class="{{ 'stars' if T.stars }}">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top sky">
+  <div class="wrap top-in">
+    <a class="brand" href="/">
+      <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor"/></svg>
+      <span>{{ S.brand_name }}</span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      {% for p in nav %}
+        <a href="{{ '/' if p.is_home else '/' ~ p.slug }}" {% if page and p.id == page.id %}aria-current="page"{% endif %}>{{ p.nav_label or p.title }}</a>
+      {% endfor %}
+      {% if S.instagram_url %}
+      <a class="ig" href="{{ S.instagram_url }}" target="_blank" rel="noopener">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        <span>{{ S.instagram_handle or 'Instagram' }}</span>
+      </a>
+      {% endif %}
+      {% include "_cur.html" %}
+    </nav>
+  </div>
+</header>
+<main id="main">{% block body %}{% endblock %}</main>
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="foot-row">
+      <span class="foot-brand">{{ S.brand_name }}</span>
+      <span class="foot-links">
+        {% if S.instagram_url %}<a href="{{ S.instagram_url }}" target="_blank" rel="noopener">{{ S.instagram_handle or 'Instagram' }}</a>{% endif %}
+        {% for p in nav %}<a href="{{ '/' if p.is_home else '/' ~ p.slug }}">{{ p.nav_label or p.title }}</a>{% endfor %}
+      </span>
+    </div>
+    {% if S.footer_text %}<p>{{ S.footer_text }}</p>{% endif %}
+    <p class="copy">© {{ S.brand_name }}</p>
+  </div>
+</footer>
+{% block after %}{% endblock %}
+<script src="{{ url_for('static', filename='site.js') }}?v=3"></script>
+</body>
+</html>

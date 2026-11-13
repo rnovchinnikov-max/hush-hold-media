@@ -1,0 +1,4 @@
+<div class="cur" role="group" aria-label="Currency">
+  <button type="button" data-set-cur="USD"{% if big %} class="big"{% endif %}>{{ usd_label or '$ USD' }}</button>
+  <button type="button" data-set-cur="EUR"{% if big %} class="big"{% endif %}>{{ eur_label or '€ EUR' }}</button>
+</div>
