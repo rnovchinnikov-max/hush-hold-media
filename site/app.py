@@ -39,15 +39,28 @@ app.jinja_env.filters["rich"] = B.rich
 app.jinja_env.globals.update(split_items=B.split_items, lines=B.lines, choices=B.choices)
 
 
+CSP_COMMON = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+              "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; "
+              "frame-src https://widget.lava.top; object-src 'none'; base-uri 'self'; form-action 'self'; "
+              "upgrade-insecure-requests; ")
+
+
 @app.after_request
 def security_headers(resp):
-    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    h = resp.headers
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    h.setdefault("Permissions-Policy",
+                 'camera=(), microphone=(), geolocation=(), usb=(), payment=(self "https://widget.lava.top")')
+    if request.is_secure:
+        h.setdefault("Strict-Transport-Security", "max-age=31536000")
     if request.path.startswith(ADMIN_PREFIX):
-        resp.headers["X-Frame-Options"] = "DENY"
-        resp.headers["Cache-Control"] = "no-store"
+        h["X-Frame-Options"] = "DENY"
+        h["Cache-Control"] = "no-store"
+        h.setdefault("Content-Security-Policy", CSP_COMMON + "frame-ancestors 'none'")
     else:
-        resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        h.setdefault("X-Frame-Options", "SAMEORIGIN")
+        h.setdefault("Content-Security-Policy", CSP_COMMON + "frame-ancestors 'self'")
     return resp
 
 

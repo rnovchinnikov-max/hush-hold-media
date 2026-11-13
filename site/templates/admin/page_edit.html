@@ -90,10 +90,5 @@
   <button class="danger" type="submit" data-confirm="Удалить страницу «{{ p.title }}» насовсем?">Удалить страницу</button>
 </form>
 {% endif %}
-<script>
-document.addEventListener('click', function (e) {
-  var b = e.target.closest('[data-confirm]');
-  if (b && !window.confirm(b.getAttribute('data-confirm'))) e.preventDefault();
-});
-</script>
+<script src="{{ url_for('static', filename='admin.js') }}"></script>
 {% endblock %}
