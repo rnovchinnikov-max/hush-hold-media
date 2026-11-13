@@ -186,7 +186,8 @@ GUIDE_BLOCKS = [
      "text": "Full guide · wake window and sleep tables · printable sleep log",
      "price_usd": "$27", "old_usd": "$47", "price_eur": "€25", "old_eur": "€45",
      "label_usd": "Pay in USD", "label_eur": "Pay in EUR",
-     "widget_usd": "https://widget.lava.top/456d50cb-0755-46c5-b894-11750cccc7f4", "widget_eur": "",
+     "widget_usd": "https://widget.lava.top/456d50cb-0755-46c5-b894-11750cccc7f4",
+     "widget_eur": "https://widget.lava.top/a2142d47-8dda-4d5a-b199-10c91b1d7dfe",
      "widget_width": 250, "widget_height": 80, "note": "Instant download after payment"},
     {"type": "faq", "title": "Questions",
      "items": "Will my baby have to cry it out? | No. Every method keeps you close while your baby learns.\n"
